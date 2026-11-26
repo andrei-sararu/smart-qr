@@ -11,3 +11,5 @@ export const uploads=sqliteTable('uploads',{id:text('id').primaryKey(),restauran
 export const rateLimits=sqliteTable('rate_limits',{key:text('key').primaryKey(),hits:integer('hits').notNull(),expires:integer('expires').notNull()});
 export const webhookEvents=sqliteTable('webhook_events',{id:text('id').primaryKey(),createdAt:integer('created_at').notNull()});
 export const enquiries=sqliteTable('enquiries',{id:text('id').primaryKey(),name:text('name').notNull(),email:text('email').notNull(),venue:text('venue').notNull(),message:text('message').notNull(),status:text('status').notNull().default('new'),createdAt:integer('created_at').notNull()});
+
+export const smartqrLinks=sqliteTable('smartqr_links',{id:text('id').primaryKey(),ownerId:text('owner_id').notNull(),label:text('label').notNull(),destination:text('destination').notNull(),enabled:integer('enabled').notNull().default(1),scans:integer('scans').notNull().default(0),revision:integer('revision').notNull().default(0),createdAt:integer('created_at').notNull()},t=>[index('smartqr_owner_idx').on(t.ownerId)]);

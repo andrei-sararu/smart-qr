@@ -50,3 +50,7 @@ The public presentation includes a local interactive phone/tablet simulation, il
 The conversion presentation adds a local automated product guide (rules, not an LLM or live agent), sourced external competitor case studies with clear ordering/payment scope differences, and a user-assumption sales scenario calculator. No Tablemint revenue uplift is claimed. Service pulse is owner-scoped and reports request volume, UTC hourly counts and median first-pickup time; legacy records without taken_at are excluded. Menu health checks information completeness, not allergen accuracy or legal compliance. Open requests are prioritised oldest first.
 
 Styles embedded in the HTML route use .styles.txt?raw imports. Importing .css?raw into a Vinext route handler incorrectly adds an RSC wrapper around GET; preserve the text imports.
+
+## SmartQR extension (private beta)
+
+Visit `/smartqr` for a free static HTTPS QR generator and an operator-only dynamic QR workspace. Dynamic destinations are editable without reprinting; redirect hits are counted (not unique people). Apply migration 0004 before use. Dynamic creation requires the existing trusted hosting identity and SUPPORT_ADMIN_EMAIL; no public paid dynamic plan is enabled. Keep redirects on a permanent domain, add abuse reporting and controls, independent authentication, tenant billing, rate limits and production verification before expanding access. Test with `node --test tests/*.test.mjs` on Node 22.13+. No changes to restaurant billing or menu routes are intended.
