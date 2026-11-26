@@ -150,8 +150,8 @@ async function openPrintDownload(kind='menu',token=''){
   try{
     const {url}=restaurant.paid&&restaurant.plan!=='Free'?await api('logo'):{url:''};
     const table=tables.find(t=>t.token===token&&t.enabled);
-    const title=kind==='qr'?(table?'Table '+table.number+' QR card':'Menu QR card'):'Printable menu';
-    modal(`<h2>${title}</h2><p class="muted">Open the downloaded file in a browser to print it or save it as a PDF.</p><form id="print-download-form"><label><input type="checkbox" name="includeLogo" ${url?'checked':'disabled'}> Include company logo</label>${url?'':'<p class="fine">Add your logo in Settings with paid Menu Pro or Service.</p>'}<button class="btn primary">Download printable file ↓</button></form>`);
+    const title=kind==='qr'?(table?(table.label||'Table '+table.number)+' QR card':'Menu QR card'):'Printable menu';
+    modal(`<h2>${esc(title)}</h2><p class="muted">Download an A4 PDF ready to print.</p><form id="print-download-form"><label><input type="checkbox" name="includeLogo" ${url?'checked':'disabled'}> Include company logo</label>${url?'':'<p class="fine">Add your logo in Settings with paid Menu Pro or Service.</p>'}<button class="btn primary">Download PDF ↓</button></form>`);
     document.getElementById('print-download-form').onsubmit=e=>downloadPrintable(e,kind,table,url);
   }catch(e){toast(e.message)}
 }
@@ -171,30 +171,90 @@ async function downloadPrintable(e,kind,table,logo){
   const form=e.currentTarget,button=form.querySelector('button');
   button.disabled=true;
   try{
-    const name=esc(restaurant.name);
-    const logoData=form.elements.includeLogo.checked&&logo?await printableImage(logo):'';
-    let content;
+    const {jsPDF}=await import('https://cdn.jsdelivr.net/npm/jspdf@4.2.1/+esm');
+    const pdf=new jsPDF({format:'a4',compress:true});
+    const canvas=document.createElement('canvas');
+    canvas.width=1240;canvas.height=1754;
+    const ctx=canvas.getContext('2d');
+    const left=85,right=1155,bottom=1665;
+    let y,page=0;
+    const newPage=()=>{
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#191919';ctx.textAlign='left';ctx.textBaseline='top';y=85;
+    };
+    const finishPage=()=>{
+      if(page++)pdf.addPage('a4');
+      pdf.addImage(canvas.toDataURL('image/jpeg',.96),'JPEG',0,0,210,297);
+    };
+    const font=(size,weight=400)=>{ctx.font=weight+' '+size+'px system-ui, sans-serif'};
+    const line=(value,size,weight=400)=>{
+      font(size,weight);
+      for(const text of wrapPDFText(ctx,value,right-left)){
+        if(y+size+12>bottom){finishPage();newPage();font(size,weight)}
+        ctx.fillText(text,left,y);y+=size+12;
+      }
+    };
+    newPage();
+    if(form.elements.includeLogo.checked&&logo){
+      const image=await loadMenuImage(await printableImage(logo));
+      const scale=Math.min(290/image.naturalWidth,120/image.naturalHeight);
+      ctx.drawImage(image,left,y,image.naturalWidth*scale,image.naturalHeight*scale);
+      y+=image.naturalHeight*scale+24;
+    }
+    line(restaurant.name,56,700);
+    y+=20;
     if(kind==='qr'){
       const query=new URLSearchParams({r:restaurant.slug});
       if(table)query.set('t',table.token);
-      const qr=await printableImage('/api/qr?'+query);
-      content=`<section><h2>${table?'Table '+table.number:'Menu'}</h2><p>Scan to view the menu</p><img width="230" height="230" src="${esc(qr)}" alt="Scan to open ${name}'s menu"></section>`;
+      const qr=await loadMenuImage(await printableImage('/api/qr?'+query));
+      line(table?(table.label||'Table '+table.number):'Menu',38,700);
+      line('Scan to view the menu',30);
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(qr,left,y+22,700,700);
     }else{
-      const items=state.items.filter(item=>item.available).slice(0,restaurant.limit);
-      const categories=[...new Set(items.map(item=>item.category))];
-      content=categories.map(category=>`<h2>${esc(category)}</h2>${items.filter(item=>item.category===category).map(item=>`<article><div><strong>${esc(item.name)}</strong><p>${esc(item.desc)}</p>${item.allergens?`<small>Allergens: ${esc(item.allergens)}</small>`:''}</div><strong>${esc(money(item.price))}</strong></article>`).join('')}`).join('');
-      if(!content)content='<p>No available dishes.</p>';
+      const grouped=new Map();
+      for(const item of state.items.filter(item=>item.available).slice(0,restaurant.limit)){
+        if(!grouped.has(item.category))grouped.set(item.category,[]);
+        grouped.get(item.category).push(item);
+      }
+      if(!grouped.size)line('No available dishes.',30);
+      for(const [category,items] of grouped){
+        if(y+160>bottom){finishPage();newPage()}
+        line(category,38,700);
+        for(const item of items){
+          if(y+120>bottom){finishPage();newPage()}
+          line(item.name+' — '+money(item.price),30,700);
+          if(item.desc)line(item.desc,25);
+          if(item.allergens)line('Allergens: '+item.allergens,23);
+          y+=12;
+        }
+        y+=20;
+      }
     }
-    const html=`<!doctype html><html lang="${esc(kind==='menu'?(restaurant.originalLanguage||'en'):'en')}"><meta charset="utf-8"><title>${name}</title><style>body{max-width:680px;margin:32px auto;padding:0 22px;font:16px system-ui;color:#1e1e1e}header,section{text-align:center}header img{max-width:180px;max-height:85px;object-fit:contain}article{display:flex;justify-content:space-between;gap:16px;border-top:1px solid #ddd;padding:9px 0;break-inside:avoid}p{margin:6px 0}h2{break-after:avoid}</style><header>${logoData?`<img src="${esc(logoData)}" alt="Company logo">`:''}<h1>${name}</h1></header>${content}</html>`;
-    const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
-    const link=document.createElement('a');
-    link.href=url;
-    link.download=restaurant.slug+(kind==='menu'?'-menu':table?'-table-'+table.number:'-menu-qr')+'.html';
-    link.click();
-    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    finishPage();
+    pdf.save(restaurant.slug+(kind==='menu'?'-menu':table?'-table-'+table.number:'-menu-qr')+'.pdf');
     closeModal();
   }catch(err){toast(err.message)}
   finally{button.disabled=false}
+}
+function wrapPDFText(ctx,value,width){
+  const lines=[];
+  let current='';
+  for(const word of String(value).split(/\s+/)){
+    const next=current?current+' '+word:word;
+    if(current&&ctx.measureText(next).width>width){lines.push(current);current=word}
+    else current=next;
+    if(ctx.measureText(current).width>width){
+      let chunk='';
+      for(const char of current){
+        if(chunk&&ctx.measureText(chunk+char).width>width){lines.push(chunk);chunk=''}
+        chunk+=char;
+      }
+      current=chunk;
+    }
+  }
+  if(current)lines.push(current);
+  return lines;
 }
 
 const homeBeforeLogo=home;

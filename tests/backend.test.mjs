@@ -81,3 +81,41 @@ test('guest dish lists validate the live menu, deduplicate and show only on the 
  assert.equal((await call('request/'+request.data.request.id,'PATCH',{status:'done'})).status,200);
  assert.equal((await send([{id:product.id,quantity:1}])).status,201);
 });
+
+test('table count preserves existing QR tokens and saves venue-scoped table details',async()=>{
+ const {r,t}=await publish();
+ assert.equal((await call('tables','PUT',{count:15})).status,200);
+ let tables=(await call('workspace')).data.tables;
+ assert.equal(tables.filter(table=>table.enabled).length,15);
+ assert.equal(tables[0].token,t.token);
+ assert.equal((await call('table/'+t.id,'PUT',{label:'Terrace A',seats:6,area:'outside'})).status,200);
+ assert.equal((await call('public/'+r.slug+'?table='+t.token,'GET',null,null)).data.restaurant.table.label,'Terrace A');
+ await create('owner-b');
+ assert.equal((await call('table/'+t.id,'PUT',{label:'B',seats:2,area:'inside'},'owner-b')).status,404);
+ await call('tables','PUT',{count:0});
+ assert.equal((await call('public/'+r.slug+'?table='+t.token,'GET',null,null)).status,404);
+ await call('tables','PUT',{count:1});
+ tables=(await call('workspace')).data.tables;
+ assert.equal(tables[0].token,t.token);
+ assert.equal(tables[0].seats,6);
+ assert.equal(tables[0].area,'outside');
+ assert.equal(tables.filter(table=>table.enabled).length,1);
+ assert.equal((await call('tables','PUT',{count:101})).status,400);
+});
+
+test('menu assistance produces editable translations and extraction drafts without inventing allergens',async()=>{
+ await create();
+ const request={action:'translate',language:'ro',name:'Soup',category:'Starters',desc:''};
+ assert.equal((await call('menu-assist','POST',request,null)).status,401);
+ assert.equal((await call('menu-assist','POST',request)).status,503);
+ env.AI={async run(model,input){
+  if(model.includes('m2m100'))return {translated_text:input.text==='Soup'?'Supă':'Aperitive'};
+  assert.match(input.image,/^data:image\/jpeg;base64,/);
+  return {response:'[{"name":"Soup","category":"Starter","price":null,"description":"Vegetable soup","allergens":"invented"}]'};
+ }};
+ const translation=await call('menu-assist','POST',request);
+ assert.deepEqual(translation.data.translation,{name:'Supă',category:'Aperitive',desc:''});
+ const extraction=await call('menu-assist','POST',{action:'extract',image:'/9j/AA=='});
+ assert.deepEqual(extraction.data.items,[{name:'Soup',category:'Starter',desc:'Vegetable soup',price:null}]);
+ assert.equal((await call('workspace')).data.restaurant.items.length,0);
+});
