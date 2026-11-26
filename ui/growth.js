@@ -114,3 +114,91 @@ marketingSection=function(id){return id==='languages'?'<section class="marketing
 const languageHomeBefore=home;
 home=function(){return languageHomeBefore().replace('<section class="wrap premium-close">','<section class="wrap premium-features" data-language-preview>'+languagePreview()+'</section><section class="wrap premium-close">')};
 if(ready)render();
+
+function companyLogo(url){
+  return /^\/api\/media\/[a-f0-9-]{36}$/.test(url||'')
+    ? `<img src="${esc(url)}" alt="Company logo" style="display:block;width:auto;max-width:148px;height:auto;max-height:64px;object-fit:contain;background:white;border-radius:8px;padding:5px;margin:0 0 8px">`
+    : '';
+}
+
+const settingsBeforeLogo=settingsHtml;
+settingsHtml=function(){
+  return settingsBeforeLogo()+`<section class="card" style="margin-top:20px"><h3>Company logo</h3><p class="muted">Put your logo on the digital menu, printed menus and QR cards.</p>${restaurant.paid&&restaurant.plan!=='Free'?'<button class="btn" onclick="openLogoSettings()">Manage company logo</button>':'<p class="fine">Available with a paid Menu Pro or Service subscription.</p>'}</section>`;
+};
+async function openLogoSettings(){
+  try{
+    const {url}=await api('logo');
+    modal(`<h2>Company logo</h2>${companyLogo(url)}<p class="muted">Upload a PNG, JPEG or WebP image up to 5 MB.</p><form onsubmit="saveCompanyLogo(event)"><label>Logo image<input name="logo" type="file" accept="image/png,image/jpeg,image/webp" required></label><button class="btn primary">Save logo</button> ${url?'<button class="btn" type="button" onclick="saveCompanyLogo(event,true)">Remove logo</button>':''}</form>`);
+  }catch(e){toast(e.message)}
+}
+async function saveCompanyLogo(e,remove=false){
+  e.preventDefault();
+  const form=remove?e.currentTarget.form:e.currentTarget;
+  const file=form.elements.logo.files[0];
+  if(!remove&&(!file||file.size>5000000))return toast('Choose an image up to 5 MB.');
+  const buttons=[...form.querySelectorAll('button')];
+  buttons.forEach(button=>button.disabled=true);
+  try{
+    const {url}=remove?{url:''}:await api('upload','POST',file);
+    await api('logo','PUT',{url});
+    closeModal();
+    toast(remove?'Logo removed.':'Logo saved to your guest menu.');
+  }catch(err){toast(err.message)}
+  finally{buttons.forEach(button=>button.disabled=false)}
+}
+async function openPrintDownload(kind='menu',token=''){
+  try{
+    const {url}=restaurant.paid&&restaurant.plan!=='Free'?await api('logo'):{url:''};
+    const table=tables.find(t=>t.token===token&&t.enabled);
+    const title=kind==='qr'?(table?'Table '+table.number+' QR card':'Menu QR card'):'Printable menu';
+    modal(`<h2>${title}</h2><p class="muted">Open the downloaded file in a browser to print it or save it as a PDF.</p><form id="print-download-form"><label><input type="checkbox" name="includeLogo" ${url?'checked':'disabled'}> Include company logo</label>${url?'':'<p class="fine">Add your logo in Settings with paid Menu Pro or Service.</p>'}<button class="btn primary">Download printable file ↓</button></form>`);
+    document.getElementById('print-download-form').onsubmit=e=>downloadPrintable(e,kind,table,url);
+  }catch(e){toast(e.message)}
+}
+async function printableImage(url){
+  const response=await fetch(url);
+  if(!response.ok)throw Error('Could not load artwork for the download.');
+  const blob=await response.blob();
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(Error('Could not read the image.'));
+    reader.readAsDataURL(blob);
+  });
+}
+async function downloadPrintable(e,kind,table,logo){
+  e.preventDefault();
+  const form=e.currentTarget,button=form.querySelector('button');
+  button.disabled=true;
+  try{
+    const name=esc(restaurant.name);
+    const logoData=form.elements.includeLogo.checked&&logo?await printableImage(logo):'';
+    let content;
+    if(kind==='qr'){
+      const query=new URLSearchParams({r:restaurant.slug});
+      if(table)query.set('t',table.token);
+      const qr=await printableImage('/api/qr?'+query);
+      content=`<section><h2>${table?'Table '+table.number:'Menu'}</h2><p>Scan to view the menu</p><img width="230" height="230" src="${esc(qr)}" alt="Scan to open ${name}'s menu"></section>`;
+    }else{
+      const items=state.items.filter(item=>item.available).slice(0,restaurant.limit);
+      const categories=[...new Set(items.map(item=>item.category))];
+      content=categories.map(category=>`<h2>${esc(category)}</h2>${items.filter(item=>item.category===category).map(item=>`<article><div><strong>${esc(item.name)}</strong><p>${esc(item.desc)}</p>${item.allergens?`<small>Allergens: ${esc(item.allergens)}</small>`:''}</div><strong>${esc(money(item.price))}</strong></article>`).join('')}`).join('');
+      if(!content)content='<p>No available dishes.</p>';
+    }
+    const html=`<!doctype html><html lang="${esc(kind==='menu'?(restaurant.originalLanguage||'en'):'en')}"><meta charset="utf-8"><title>${name}</title><style>body{max-width:680px;margin:32px auto;padding:0 22px;font:16px system-ui;color:#1e1e1e}header,section{text-align:center}header img{max-width:180px;max-height:85px;object-fit:contain}article{display:flex;justify-content:space-between;gap:16px;border-top:1px solid #ddd;padding:9px 0;break-inside:avoid}p{margin:6px 0}h2{break-after:avoid}</style><header>${logoData?`<img src="${esc(logoData)}" alt="Company logo">`:''}<h1>${name}</h1></header>${content}</html>`;
+    const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=restaurant.slug+(kind==='menu'?'-menu':table?'-table-'+table.number:'-menu-qr')+'.html';
+    link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    closeModal();
+  }catch(err){toast(err.message)}
+  finally{button.disabled=false}
+}
+
+const homeBeforeLogo=home;
+home=function(){
+  return homeBeforeLogo().replace('<section class="wrap premium-close">',`<section class="wrap premium-features"><div class="premium-section-heading"><h2>Your logo, from the table to the phone</h2><p>With Menu Pro or Service, add your company logo once. Show it on the digital menu and include it when you download printable menus and QR cards.</p><a class="btn" href="/#pricing">Compare plans →</a></div></section><section class="wrap premium-close">`);
+};
+if(ready)render();

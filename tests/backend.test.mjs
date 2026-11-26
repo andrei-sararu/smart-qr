@@ -39,3 +39,23 @@ test('invoice listing without a Stripe customer returns a truthful empty list',a
 test('contact form saves a real enquiry and protects it from ordinary accounts',async()=>{const b={name:'Test Owner',email:'owner@example.test',venue:'Test Bistro',message:'Can I use a tablet?'};const saved=await call('contact','POST',b,null);assert.equal(saved.status,201);assert.ok(saved.data.reference);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM enquiries').get().n,1);assert.equal((await call('enquiries','GET',null,null)).status,401);assert.equal((await call('enquiries')).status,403);env.SUPPORT_ADMIN_EMAIL='owner-a@example.test';const inbox=await call('enquiries');assert.equal(inbox.data.enquiries[0].message,b.message);assert.equal((await call('enquiries/'+saved.data.reference,'PATCH',{status:'reviewed'})).status,200);assert.equal((await call('enquiries')).data.enquiries[0].status,'reviewed')});
 test('contact form validates addresses, suppresses honeypots and rate-limits submissions',async()=>{const b={name:'Owner',email:'owner@example.test',venue:'Bistro',message:'Question'};assert.equal((await call('contact','POST',{...b,email:'invalid'},null)).status,400);assert.equal((await call('contact','POST',{...b,website:'spam'},null)).status,200);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM enquiries').get().n,0);for(let i=0;i<3;i++)assert.equal((await call('contact','POST',b,null)).status,201);assert.equal((await call('contact','POST',b,null)).status,429)});
 test('pickup timestamp is captured once and insights remain owner-scoped',async()=>{const {t}=await publish();const c=await call('request','POST',{token:t.token,type:'Waiter'},null);await call('request/'+c.data.request.id,'PATCH',{status:'taken'});const record=sql.prepare('SELECT taken_at FROM service_requests WHERE id=?').get(c.data.request.id);assert.equal(typeof record.taken_at,'number');await call('request/'+c.data.request.id,'PATCH',{status:'done'});assert.equal(sql.prepare('SELECT taken_at FROM service_requests WHERE id=?').get(c.data.request.id).taken_at,record.taken_at);const metrics=await call('insights');assert.equal(metrics.data.service.measuredResponses,1);assert.equal(metrics.data.service.requests24h,1);await create('owner-b');assert.equal((await call('insights','GET',null,'owner-b')).data.service.requests24h,0);assert.equal((await call('insights','GET',null,null)).status,401)});
+
+test('company logos are owner-scoped, paid-only and hidden after downgrade',async()=>{
+ const {r}=await publish();
+ const file='11111111-1111-4111-8111-111111111111';
+ const url='/api/media/'+file;
+ assert.equal((await call('logo','PUT',{url})).status,403);
+ const other=await create('owner-b');
+ sql.prepare("INSERT INTO uploads (id,restaurant_id,mime,bytes,created_at) VALUES (?,?,'image/png',128,0)").run(file,other.id);
+ sql.prepare("UPDATE restaurants SET plan='Menu Pro',subscription_status='active',subscription_end=? WHERE id=?").run(Date.now()+86400000,r.id);
+ assert.equal((await call('logo','PUT',{url})).status,403);
+ sql.prepare('UPDATE uploads SET restaurant_id=? WHERE id=?').run(r.id,file);
+ assert.equal((await call('logo','PUT',{url})).status,200);
+ assert.equal((await call('logo')).data.url,url);
+ assert.equal((await call('public/'+r.slug,'GET',null,null)).data.restaurant.logo,url);
+ assert.equal((await call('logo','PUT',{url:''})).data.url,'');
+ assert.equal((await call('public/'+r.slug,'GET',null,null)).data.restaurant.logo,'');
+ await call('logo','PUT',{url});
+ sql.prepare('UPDATE restaurants SET subscription_end=0 WHERE id=?').run(r.id);
+ assert.equal((await call('public/'+r.slug,'GET',null,null)).data.restaurant.logo,'');
+});
