@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
- if(url.pathname.startsWith('/api/smartqr/'))return smartQR(req,env,(target:string)=>QRCode.toString(target,{type:'svg',width:512,margin:4,errorCorrectionLevel:'M'}));
+ if(url.pathname.startsWith('/api/smartqr/'))return smartQR(req,env,(target:string,options?:Record<string,unknown>)=>QRCode.toString(target,{type:'svg',width:512,margin:4,errorCorrectionLevel:'M',...options}));
  if(url.pathname==='/api/qr'&&req.method==='GET'){
   const slug=url.searchParams.get('r')||'',token=url.searchParams.get('t')||'';
   if(!/^[a-z0-9-]{1,80}$/.test(slug)||token&&!/^[a-f0-9-]{36}$/.test(token))return new Response('Invalid menu or table',{status:400});

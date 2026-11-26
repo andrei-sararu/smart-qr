@@ -36,6 +36,13 @@
       "when": 1794184484495,
       "tag": "0004_smartqr_links",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794184484496,
+      "tag": "0005_smartqr_trials",
+      "breakpoints": true
     }
   ]
 }
