@@ -1,0 +1,1 @@
+ALTER TABLE `service_requests` ADD `taken_at` integer;
