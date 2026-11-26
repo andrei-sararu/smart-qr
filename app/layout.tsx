@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tablemint — Digital menus & table service",
+  title: "Smart QR — Digital menus & table service",
   description: "Digital menus and table service for independent restaurants.",
   icons: {
     icon: "/favicon.svg",
