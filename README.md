@@ -50,3 +50,20 @@ The public presentation includes a local interactive phone/tablet simulation, il
 The conversion presentation adds a local automated product guide (rules, not an LLM or live agent), sourced external competitor case studies with clear ordering/payment scope differences, and a user-assumption sales scenario calculator. No Tablemint revenue uplift is claimed. Service pulse is owner-scoped and reports request volume, UTC hourly counts and median first-pickup time; legacy records without taken_at are excluded. Menu health checks information completeness, not allergen accuracy or legal compliance. Open requests are prioritised oldest first.
 
 Styles embedded in the HTML route use .styles.txt?raw imports. Importing .css?raw into a Vinext route handler incorrectly adds an RSC wrapper around GET; preserve the text imports.
+
+## SmartQR extension (private beta)
+
+Visit `/smartqr` for a free static HTTPS QR generator and an operator-only dynamic QR workspace. Dynamic destinations are editable without reprinting; redirect hits are counted (not unique people). Apply migration 0004 before use. Dynamic creation requires the existing trusted hosting identity and SUPPORT_ADMIN_EMAIL; no public paid dynamic plan is enabled. Keep redirects on a permanent domain, add abuse reporting and controls, independent authentication, tenant billing, rate limits and production verification before expanding access. Test with `node --test tests/*.test.mjs` on Node 22.13+. No changes to restaurant billing or menu routes are intended.
+
+## SmartQR launch configuration
+
+See [launch decisions and identity configuration](docs/SMARTQR-LAUNCH.md). The new SmartQR workspace now uses independent OIDC rather than ChatGPT headers; the legacy Tablemint restaurant workspace is unchanged. Pricing on the SmartQR page is indicative and not purchasable. Dynamic QR remains an operator-only beta.
+
+### Demo and trial
+The public SmartQR page includes an explicitly simulated dynamic-code demo, and real static QR generation with contrast-checked colors and SVG size selection. Apply migration 0005. Verified operator beta accounts can start a one-time 14-day Starter trial without a card; the server enforces 10 links, expiration and no restart. Existing redirects continue after trial expiry to avoid breaking printed codes, but creation and editing are restricted (disable remains allowed). No paid entitlements or public dynamic signup until billing and abuse controls are ready.
+
+### Marketing capture
+Migration 0006 adds optional newsletter signup, consent history fields, pending/confirmed/suppressed status, private operator stats and CSV export of confirmed contacts. No emails are sent yet. See [marketing launch checklist](docs/SMARTQR-MARKETING.md).
+
+### Customer billing portal
+Migration 0008 adds owner-scoped billing profiles and `/smartqr/account`. The invoice centre displays the provider-not-connected state; SmartQR checkout is deliberately unavailable. See [production gates](docs/PRODUCTION-GATES.md).

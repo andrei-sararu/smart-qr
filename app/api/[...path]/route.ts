@@ -1,9 +1,50 @@
+import {cardAPI} from '../../../lib/smartqr-card.mjs';
+import {campaignsAPI} from '../../../lib/smartqr-campaigns.mjs';
+import {bulkGenerate} from '../../../lib/smartqr-bulk.mjs';
+import {smartQRIdentity} from '../../../lib/smartqr-auth.mjs';
+import {paidAccess} from '../../../lib/smartqr-stripe.mjs';
+import {safetyAPI} from '../../../lib/smartqr-safety.mjs';
+import {makePayload} from '../../../lib/smartqr-payloads.mjs';
+import {qrOptions} from '../../../lib/smartqr-plans.mjs';
+import {supportAPI} from '../../../lib/smartqr-support.mjs';
+import {billingAPI} from '../../../lib/smartqr-billing.mjs';
+import {crmAPI} from '../../../lib/smartqr-crm.mjs';
+import {marketingAPI} from '../../../lib/smartqr-marketing.mjs';
 import { env } from 'cloudflare:workers';
 import { handleAPI } from '../../../lib/backend.mjs';
+import { smartQR } from '../../../lib/smartqr.mjs';
 import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/cards/'))return cardAPI(req,env);
+ if(url.pathname.startsWith('/api/smartqr/campaigns/'))return campaignsAPI(req,env);
+ if(url.pathname==='/api/smartqr/tools/bulk'&&req.method==='POST'){
+  if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
+  try{
+   const user=await smartQRIdentity(req,env);if(!user)return Response.json({error:'Sign in required'},{status:401});
+   const paid=await paidAccess(env,user.id);if(!['Business','Agency'].includes(paid?.plan||''))return Response.json({error:'Business or Agency plan required'},{status:403});
+   if(Number(req.headers.get('content-length')||0)>55000)return Response.json({error:'Too large'},{status:413});
+   const raw=await req.text();if(raw.length>55000)return Response.json({error:'Too large'},{status:413});
+   const d=JSON.parse(raw),options=qrOptions(d),rows=await bulkGenerate(d.urls,(target:string)=>QRCode.toString(target,{type:'svg',...options}));
+   return Response.json({rows},{headers:{'cache-control':'no-store'}});
+  }catch{return Response.json({error:'Invalid input or bulk generation unavailable'},{status:400})}
+ }
+ if(url.pathname.startsWith('/api/smartqr/safety/'))return safetyAPI(req,env);
+ if(url.pathname==='/api/smartqr/tools/generate'&&req.method==='POST'){
+  if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
+  try{
+   const raw=await req.text();if(raw.length>4096)return Response.json({error:'Too large'},{status:413});
+   const data=JSON.parse(raw);if(data.type==='wifi')return Response.json({error:'Wi-Fi QR requires local generation'},{status:400});const payload=makePayload(data),options=qrOptions(data);
+   const svg=await QRCode.toString(payload,{type:'svg',...options});
+   return new Response(svg,{headers:{'content-type':'image/svg+xml','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+  }catch{return Response.json({error:'Invalid QR content or appearance'},{status:400,headers:{'cache-control':'no-store'}})}
+ }
+ if(url.pathname.startsWith('/api/smartqr/support/'))return supportAPI(req,env);
+ if(url.pathname.startsWith('/api/smartqr/billing/'))return billingAPI(req,env);
+ if(url.pathname.startsWith('/api/smartqr/crm/'))return crmAPI(req,env);
+ if(/^\/api\/smartqr\/marketing\/(subscribe|confirm|unsubscribe|stats|export)$/.test(url.pathname))return marketingAPI(req,env);
+ if(url.pathname.startsWith('/api/smartqr/'))return smartQR(req,env,(target:string,options?:Record<string,unknown>)=>QRCode.toString(target,{type:'svg',width:512,margin:4,errorCorrectionLevel:'M',...options}));
  if(url.pathname==='/api/qr'&&req.method==='GET'){
   const slug=url.searchParams.get('r')||'',token=url.searchParams.get('t')||'';
   if(!/^[a-z0-9-]{1,80}$/.test(slug)||token&&!/^[a-f0-9-]{36}$/.test(token))return new Response('Invalid menu or table',{status:400});

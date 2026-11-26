@@ -29,6 +29,76 @@
       "when": 1794184484494,
       "tag": "0003_daily_jean_grey",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794184484495,
+      "tag": "0004_smartqr_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794184484496,
+      "tag": "0005_smartqr_trials",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794184484497,
+      "tag": "0006_smartqr_marketing",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794184484498,
+      "tag": "0007_smartqr_crm",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794184484499,
+      "tag": "0008_smartqr_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794184484500,
+      "tag": "0009_smartqr_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794184484501,
+      "tag": "0010_smartqr_stripe",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794184484502,
+      "tag": "0011_smartqr_safety_analytics",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1794184484503,
+      "tag": "0012_smartqr_campaigns",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794184484504,
+      "tag": "0013_smartqr_cards",
+      "breakpoints": true
     }
   ]
 }

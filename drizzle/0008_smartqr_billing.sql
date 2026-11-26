@@ -1,0 +1,1 @@
+CREATE TABLE `smartqr_billing_profiles` (`owner_id` text PRIMARY KEY NOT NULL, `company` text NOT NULL, `address` text NOT NULL, `city` text NOT NULL, `postal_code` text NOT NULL, `country` text NOT NULL, `tax_id` text NOT NULL, `registration` text NOT NULL, `updated_at` integer NOT NULL);

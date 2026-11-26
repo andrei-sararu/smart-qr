@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {entitlement,qrOptions,PLANS} from '../lib/smartqr-plans.mjs';
+test('trial expires precisely and cannot be treated as a paid plan',()=>{assert.equal(entitlement(null,100).limit,0);assert.equal(entitlement({trial_end:101},100).limit,10);assert.equal(entitlement({trial_end:100},100).plan,'Free');assert.equal(entitlement({trial_end:101},100).checkoutReady,false);assert.equal(PLANS.Business.monthly,1999)});
+test('QR colors enforce contrast and allowed sizes',()=>{assert.equal(qrOptions({size:1024}).width,1024);assert.equal(qrOptions().margin,4);assert.throws(()=>qrOptions({dark:'#ffffff',light:'#ffffff'}));assert.throws(()=>qrOptions({size:99999}));assert.throws(()=>qrOptions({dark:'red'}))});
