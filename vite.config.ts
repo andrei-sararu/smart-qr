@@ -6,7 +6,7 @@ import { configureToolEnvironment } from "./scripts/tool-environment.mjs";
 import { sites } from "./scripts/vite/sites-vite-plugin";
 import { connectorPreview } from "./scripts/vite/connector-preview-plugin.mjs";
 
-const D1_DATABASE_ID = process.env.SMART_QR_D1_DATABASE_ID;
+const D1_DATABASE_ID = process.env.SMART_QR_D1_DATABASE_ID || "a68f2235-4fa7-4fe8-9ca7-f5b50c184413";
 const isValidD1Id = (value: string | undefined) =>
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) &&
   value !== "00000000-0000-4000-8000-000000000000";
