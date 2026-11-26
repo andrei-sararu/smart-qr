@@ -1,4 +1,4 @@
-# Tablemint
+# Smart QR
 
 Server-backed QR menus and table service for independent restaurants. Existing visual design retained from the initial preview.
 
@@ -47,6 +47,6 @@ The public presentation includes a local interactive phone/tablet simulation, il
 
 ## Growth presentation and operational insights
 
-The conversion presentation adds a local automated product guide (rules, not an LLM or live agent), sourced external competitor case studies with clear ordering/payment scope differences, and a user-assumption sales scenario calculator. No Tablemint revenue uplift is claimed. Service pulse is owner-scoped and reports request volume, UTC hourly counts and median first-pickup time; legacy records without taken_at are excluded. Menu health checks information completeness, not allergen accuracy or legal compliance. Open requests are prioritised oldest first.
+The conversion presentation adds a local automated product guide (rules, not an LLM or live agent), sourced external competitor case studies with clear ordering/payment scope differences, and a user-assumption sales scenario calculator. No Smart QR revenue uplift is claimed. Service pulse is owner-scoped and reports request volume, UTC hourly counts and median first-pickup time; legacy records without taken_at are excluded. Menu health checks information completeness, not allergen accuracy or legal compliance. Open requests are prioritised oldest first.
 
 Styles embedded in the HTML route use .styles.txt?raw imports. Importing .css?raw into a Vinext route handler incorrectly adds an RSC wrapper around GET; preserve the text imports.
