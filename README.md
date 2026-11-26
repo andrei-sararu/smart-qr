@@ -21,11 +21,11 @@ Order-taking, guest card payments, POS, fiscal devices, automatic PDF extraction
 
 Site sharing is public by owner instruction. Guest menus do not require login. Restaurant administration uses ChatGPT identity; public menus need anonymous site access enabled before a restaurant pilot. A custom domain does not change sharing.
 
-Custom domain requested: menu.cotiso.co.uk. DNS validation and TLS are managed by the hosting provider.
+Custom domain requested: qr.cotiso.co.uk. DNS validation and TLS are managed by the hosting provider.
 
 ## Stripe activation
 
-Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in hosted runtime secrets, never source control. Start with test-mode keys and test a full subscription cycle before live payments. The webhook URL is https://menu.cotiso.co.uk/api/stripe/webhook (or the current working Site origin until DNS is ready).
+Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in hosted runtime secrets, never source control. Start with test-mode keys and test a full subscription cycle before live payments. The webhook URL is https://qr.cotiso.co.uk/api/stripe/webhook (or the current working Site origin until DNS is ready).
 
 Subscribe to checkout.session.completed, customer.subscription.created, customer.subscription.updated and customer.subscription.deleted. Enable cancellation and payment-method updates in Stripe's Customer Portal. Plan metadata is validated against price, interval and currency; current subscriptions are retrieved from Stripe before entitlements are updated. Stripe billing is site-wide; restaurants' own customer payment accounts are not part of this release.
 
