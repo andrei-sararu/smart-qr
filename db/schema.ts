@@ -29,3 +29,7 @@ export const smartqrTickets=sqliteTable('smartqr_tickets',{id:text('id').primary
 export const smartqrTicketMessages=sqliteTable('smartqr_ticket_messages',{id:text('id').primaryKey().notNull(),ticketId:text('ticket_id').notNull(),authorId:text('author_id').notNull(),authorType:text('author_type').notNull(),body:text('body').notNull(),createdAt:integer('created_at').notNull()},t=>[index('smartqr_ticket_messages_lookup').on(t.ticketId)]);
 
 export const smartqrStripeCustomers=sqliteTable('smartqr_stripe_customers',{ownerId:text('owner_id').primaryKey().notNull(),customerId:text('customer_id').notNull()},t=>[uniqueIndex('smartqr_stripe_customer_unique').on(t.customerId)]);
+
+export const smartqrDaily=sqliteTable('smartqr_daily',{id:text('id').primaryKey().notNull(),linkId:text('link_id').notNull(),day:text('day').notNull(),country:text('country').notNull(),device:text('device').notNull(),hits:integer('hits').notNull()},t=>[index('smartqr_daily_link_idx').on(t.linkId)]);
+export const smartqrBlocks=sqliteTable('smartqr_blocks',{linkId:text('link_id').primaryKey().notNull(),reason:text('reason').notNull(),createdAt:integer('created_at').notNull()});
+export const smartqrAbuse=sqliteTable('smartqr_abuse',{id:text('id').primaryKey().notNull(),linkId:text('link_id').notNull(),category:text('category').notNull(),status:text('status').notNull(),createdAt:integer('created_at').notNull()},t=>[index('smartqr_abuse_link_idx').on(t.linkId)]);

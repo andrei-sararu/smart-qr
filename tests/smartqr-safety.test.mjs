@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {dimensions} from '../lib/smartqr-safety.mjs';
+test('scan dimensions do not retain IP or raw user-agent',()=>{const r=new Request('https://example.com',{headers:{'user-agent':'Example iPhone mobile'}});assert.deepEqual(dimensions(r,0),{day:'1970-01-01',country:'ZZ',device:'mobile'});assert.equal(dimensions(new Request('https://example.com',{headers:{'user-agent':'crawler bot'}}),0).device,'bot')});

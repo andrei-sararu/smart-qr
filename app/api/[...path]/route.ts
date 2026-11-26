@@ -1,3 +1,4 @@
+import {safetyAPI} from '../../../lib/smartqr-safety.mjs';
 import {makePayload} from '../../../lib/smartqr-payloads.mjs';
 import {qrOptions} from '../../../lib/smartqr-plans.mjs';
 import {supportAPI} from '../../../lib/smartqr-support.mjs';
@@ -11,6 +12,7 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/safety/'))return safetyAPI(req,env);
  if(url.pathname==='/api/smartqr/tools/generate'&&req.method==='POST'){
   if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
   try{

@@ -78,6 +78,13 @@
       "when": 1794184484501,
       "tag": "0010_smartqr_stripe",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794184484502,
+      "tag": "0011_smartqr_safety_analytics",
+      "breakpoints": true
     }
   ]
 }
