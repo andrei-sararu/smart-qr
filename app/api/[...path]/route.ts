@@ -1,3 +1,7 @@
+import {campaignsAPI} from '../../../lib/smartqr-campaigns.mjs';
+import {bulkGenerate} from '../../../lib/smartqr-bulk.mjs';
+import {smartQRIdentity} from '../../../lib/smartqr-auth.mjs';
+import {paidAccess} from '../../../lib/smartqr-stripe.mjs';
 import {safetyAPI} from '../../../lib/smartqr-safety.mjs';
 import {makePayload} from '../../../lib/smartqr-payloads.mjs';
 import {qrOptions} from '../../../lib/smartqr-plans.mjs';
@@ -12,6 +16,18 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/campaigns/'))return campaignsAPI(req,env);
+ if(url.pathname==='/api/smartqr/tools/bulk'&&req.method==='POST'){
+  if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
+  try{
+   const user=await smartQRIdentity(req,env);if(!user)return Response.json({error:'Sign in required'},{status:401});
+   const paid=await paidAccess(env,user.id);if(!['Business','Agency'].includes(paid?.plan||''))return Response.json({error:'Business or Agency plan required'},{status:403});
+   if(Number(req.headers.get('content-length')||0)>55000)return Response.json({error:'Too large'},{status:413});
+   const raw=await req.text();if(raw.length>55000)return Response.json({error:'Too large'},{status:413});
+   const d=JSON.parse(raw),options=qrOptions(d),rows=await bulkGenerate(d.urls,(target:string)=>QRCode.toString(target,{type:'svg',...options}));
+   return Response.json({rows},{headers:{'cache-control':'no-store'}});
+  }catch{return Response.json({error:'Invalid input or bulk generation unavailable'},{status:400})}
+ }
  if(url.pathname.startsWith('/api/smartqr/safety/'))return safetyAPI(req,env);
  if(url.pathname==='/api/smartqr/tools/generate'&&req.method==='POST'){
   if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
