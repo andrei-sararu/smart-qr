@@ -59,3 +59,25 @@ test('company logos are owner-scoped, paid-only and hidden after downgrade',asyn
  sql.prepare('UPDATE restaurants SET subscription_end=0 WHERE id=?').run(r.id);
  assert.equal((await call('public/'+r.slug,'GET',null,null)).data.restaurant.logo,'');
 });
+
+test('guest dish lists validate the live menu, deduplicate and show only on the owner board',async()=>{
+ const {r,t}=await publish();
+ const send=items=>call('request','POST',{token:t.token,type:'OrderReady',items},null);
+ assert.equal((await send([])).status,400);
+ assert.equal((await send([{id:product.id,quantity:21}])).status,400);
+ assert.equal((await send([{id:'missing',quantity:1}])).status,400);
+ const request=await send([{id:product.id,name:'Untrusted name',quantity:2}]);
+ assert.equal(request.status,201);
+ assert.equal((await send([{id:product.id,quantity:1}])).data.alreadyOpen,true);
+ const board=(await call('workspace')).data.requests;
+ assert.deepEqual(board[0].items,[{name:'Soup',quantity:2}]);
+ assert.equal(board[0].tableNumber,t.number);
+ const guest=(await call('public/'+r.slug+'?table='+t.token,'GET',null,null)).data.requests;
+ assert.equal(guest[0].type,'OrderReady');
+ assert.equal(guest[0].items,undefined);
+ await create('owner-b');
+ assert.deepEqual((await call('workspace','GET',null,'owner-b')).data.requests,[]);
+ assert.equal((await call('request/'+request.data.request.id,'PATCH',{status:'taken'})).status,200);
+ assert.equal((await call('request/'+request.data.request.id,'PATCH',{status:'done'})).status,200);
+ assert.equal((await send([{id:product.id,quantity:1}])).status,201);
+});
