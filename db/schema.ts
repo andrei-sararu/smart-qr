@@ -27,3 +27,5 @@ export const smartqrBillingProfiles=sqliteTable('smartqr_billing_profiles',{owne
 
 export const smartqrTickets=sqliteTable('smartqr_tickets',{id:text('id').primaryKey().notNull(),ownerId:text('owner_id').notNull(),subject:text('subject').notNull(),category:text('category').notNull(),status:text('status').notNull(),priority:text('priority').notNull(),createdAt:integer('created_at').notNull(),updatedAt:integer('updated_at').notNull()},t=>[index('smartqr_tickets_lookup').on(t.ownerId)]);
 export const smartqrTicketMessages=sqliteTable('smartqr_ticket_messages',{id:text('id').primaryKey().notNull(),ticketId:text('ticket_id').notNull(),authorId:text('author_id').notNull(),authorType:text('author_type').notNull(),body:text('body').notNull(),createdAt:integer('created_at').notNull()},t=>[index('smartqr_ticket_messages_lookup').on(t.ticketId)]);
+
+export const smartqrStripeCustomers=sqliteTable('smartqr_stripe_customers',{ownerId:text('owner_id').primaryKey().notNull(),customerId:text('customer_id').notNull()},t=>[uniqueIndex('smartqr_stripe_customer_unique').on(t.customerId)]);

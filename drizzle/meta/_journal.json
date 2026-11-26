@@ -71,6 +71,13 @@
       "when": 1794184484500,
       "tag": "0009_smartqr_support",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794184484501,
+      "tag": "0010_smartqr_stripe",
+      "breakpoints": true
     }
   ]
 }
