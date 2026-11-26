@@ -1,3 +1,4 @@
+import {billingAPI} from '../../../lib/smartqr-billing.mjs';
 import {crmAPI} from '../../../lib/smartqr-crm.mjs';
 import {marketingAPI} from '../../../lib/smartqr-marketing.mjs';
 import { env } from 'cloudflare:workers';
@@ -7,6 +8,7 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/billing/'))return billingAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/crm/'))return crmAPI(req,env);
  if(/^\/api\/smartqr\/marketing\/(subscribe|confirm|unsubscribe|stats|export)$/.test(url.pathname))return marketingAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/'))return smartQR(req,env,(target:string,options?:Record<string,unknown>)=>QRCode.toString(target,{type:'svg',width:512,margin:4,errorCorrectionLevel:'M',...options}));

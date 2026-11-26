@@ -64,3 +64,6 @@ The public SmartQR page includes an explicitly simulated dynamic-code demo, and 
 
 ### Marketing capture
 Migration 0006 adds optional newsletter signup, consent history fields, pending/confirmed/suppressed status, private operator stats and CSV export of confirmed contacts. No emails are sent yet. See [marketing launch checklist](docs/SMARTQR-MARKETING.md).
+
+### Customer billing portal
+Migration 0008 adds owner-scoped billing profiles and `/smartqr/account`. The invoice centre displays the provider-not-connected state; SmartQR checkout is deliberately unavailable. See [production gates](docs/PRODUCTION-GATES.md).
