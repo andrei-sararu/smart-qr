@@ -61,3 +61,6 @@ See [launch decisions and identity configuration](docs/SMARTQR-LAUNCH.md). The n
 
 ### Demo and trial
 The public SmartQR page includes an explicitly simulated dynamic-code demo, and real static QR generation with contrast-checked colors and SVG size selection. Apply migration 0005. Verified operator beta accounts can start a one-time 14-day Starter trial without a card; the server enforces 10 links, expiration and no restart. Existing redirects continue after trial expiry to avoid breaking printed codes, but creation and editing are restricted (disable remains allowed). No paid entitlements or public dynamic signup until billing and abuse controls are ready.
+
+### Marketing capture
+Migration 0006 adds optional newsletter signup, consent history fields, pending/confirmed/suppressed status, private operator stats and CSV export of confirmed contacts. No emails are sent yet. See [marketing launch checklist](docs/SMARTQR-MARKETING.md).
