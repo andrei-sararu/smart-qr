@@ -1,0 +1,22 @@
+name: Initialize Smart QR D1
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply tracked D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' '{"name":"smart-qr","compatibility_date":"2026-05-15","d1_databases":[{"binding":"DB","database_name":"smart-qr-db","database_id":"a68f2235-4fa7-4fe8-9ca7-f5b50c184413","migrations_dir":"drizzle"}]}' > wrangler.migrations.json
+          npx --yes wrangler@4.92.0 d1 migrations apply smart-qr-db --remote --config wrangler.migrations.json
+          npx --yes wrangler@4.92.0 d1 execute smart-qr-db --remote --config wrangler.migrations.json --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
