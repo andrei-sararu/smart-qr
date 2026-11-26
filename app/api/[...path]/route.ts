@@ -1,3 +1,4 @@
+import {cardAPI} from '../../../lib/smartqr-card.mjs';
 import {campaignsAPI} from '../../../lib/smartqr-campaigns.mjs';
 import {bulkGenerate} from '../../../lib/smartqr-bulk.mjs';
 import {smartQRIdentity} from '../../../lib/smartqr-auth.mjs';
@@ -16,6 +17,7 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/cards/'))return cardAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/campaigns/'))return campaignsAPI(req,env);
  if(url.pathname==='/api/smartqr/tools/bulk'&&req.method==='POST'){
   if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});

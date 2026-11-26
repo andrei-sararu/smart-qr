@@ -1,0 +1,1 @@
+Migration 0013 adds one editable digital business card per verified identity, private by default, explicit publish/unpublish, public contact page, downloadable vCard and SVG QR. No arbitrary HTML, images, tracking, custom domain or team-managed cards. The public card page is noindex; publishing still makes the data public. Validate on staging before release.

@@ -92,6 +92,13 @@
       "when": 1794184484503,
       "tag": "0012_smartqr_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794184484504,
+      "tag": "0013_smartqr_cards",
+      "breakpoints": true
     }
   ]
 }
