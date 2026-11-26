@@ -6,8 +6,10 @@ import { configureToolEnvironment } from "./scripts/tool-environment.mjs";
 import { sites } from "./scripts/vite/sites-vite-plugin";
 import { connectorPreview } from "./scripts/vite/connector-preview-plugin.mjs";
 
-const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
-  "00000000-0000-4000-8000-000000000000";
+const D1_DATABASE_ID = process.env.SMART_QR_D1_DATABASE_ID;
+const isValidD1Id = (value: string | undefined) =>
+  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) &&
+  value !== "00000000-0000-4000-8000-000000000000";
 
 const { d1, r2 } = hostingConfig;
 
@@ -22,8 +24,8 @@ const localBindingConfig = {
     ? [
         {
           binding: d1,
-          database_name: "site-creator-d1",
-          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+          database_name: "smart-qr-db",
+          database_id: isValidD1Id(D1_DATABASE_ID) ? D1_DATABASE_ID! : "00000000-0000-4000-8000-000000000000",
         },
       ]
     : [],
@@ -38,6 +40,9 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  if (command === "build" && d1 && !isValidD1Id(D1_DATABASE_ID)) {
+    throw new Error("Smart QR deployment needs SMART_QR_D1_DATABASE_ID. Create a Cloudflare D1 database named smart-qr-db, copy its database UUID, and set SMART_QR_D1_DATABASE_ID in the Cloudflare build environment before redeploying. Do not reuse another app\u0027s database.");
+  }
   configureToolEnvironment(process.cwd());
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
