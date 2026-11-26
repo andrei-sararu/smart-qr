@@ -54,3 +54,7 @@ Styles embedded in the HTML route use .styles.txt?raw imports. Importing .css?ra
 ## SmartQR extension (private beta)
 
 Visit `/smartqr` for a free static HTTPS QR generator and an operator-only dynamic QR workspace. Dynamic destinations are editable without reprinting; redirect hits are counted (not unique people). Apply migration 0004 before use. Dynamic creation requires the existing trusted hosting identity and SUPPORT_ADMIN_EMAIL; no public paid dynamic plan is enabled. Keep redirects on a permanent domain, add abuse reporting and controls, independent authentication, tenant billing, rate limits and production verification before expanding access. Test with `node --test tests/*.test.mjs` on Node 22.13+. No changes to restaurant billing or menu routes are intended.
+
+## SmartQR launch configuration
+
+See [launch decisions and identity configuration](docs/SMARTQR-LAUNCH.md). The new SmartQR workspace now uses independent OIDC rather than ChatGPT headers; the legacy Tablemint restaurant workspace is unchanged. Pricing on the SmartQR page is indicative and not purchasable. Dynamic QR remains an operator-only beta.
