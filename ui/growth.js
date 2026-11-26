@@ -68,3 +68,17 @@ async function saveAppearance(theme){const status=document.getElementById('appea
 const appearanceLiveMenu=liveMenu;
 liveMenu=function(){const theme=['editorial','coffee','hotel'].includes(guest.theme)?guest.theme:'classic';return appearanceLiveMenu().replace('class="customer"','class="customer public-theme-'+theme+'"')};
 if(ready)render();
+
+const clearHome=home;
+home=function(){return clearHome().replace('Great service starts<br>with a <em>smart menu.</em>','QR code menus &amp;<br><em>table service.</em>').replace('Give guests a beautiful digital menu and your team a simpler way to manage table requests. All from one QR code.','Smart QR is a digital menu platform for restaurants, cafés and hotels. Create your menu, print a QR code for each table and receive waiter and bill requests on your staff’s devices.').replace('ONE PLATFORM. LESS ADMIN.','HOW SMART QR WORKS')};
+let accountMode='login';
+function accountForm(){return `<main class="wrap section"><div class="card" style="max-width:440px;margin:20px auto;padding:30px"><h2>${accountMode==='register'?'Create your account':'Sign in to Smart QR'}</h2><p class="muted">Manage your restaurant and digital menus.</p><form onsubmit="submitAccount(event)"><label>Email address<input name="email" type="email" required autocomplete="email" maxlength="254"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="${accountMode==='register'?'new-password':'current-password'}"></label><p class="fine">Use at least 12 characters. Email verification and password recovery are not yet available.</p><button class="btn primary" type="submit">${accountMode==='register'?'Create account':'Sign in'}</button><p id="account-error" role="alert"></p></form><button class="btn" onclick="accountMode=accountMode==='login'?'register':'login';render()">${accountMode==='login'?'New here? Create an account':'Already registered? Sign in'}</button></div></main>`};
+const standaloneDashboard=dashboard;
+dashboard=function(){return session?standaloneDashboard():accountForm()};
+const standaloneOnboard=onboard;
+onboard=function(){if(!session){accountMode='register';go('dashboard');return}return standaloneOnboard()};
+async function submitAccount(e){e.preventDefault();const form=e.target,button=form.querySelector('button[type=submit]');button.disabled=true;try{const data=Object.fromEntries(new FormData(form));const r=await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,action:accountMode})});const result=await r.json();if(!r.ok)throw Error(result.error||'Unable to sign in');location.reload()}catch(err){document.getElementById('account-error').textContent=err.message;button.disabled=false}}
+async function signOutLocal(){await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});location.href='/#home';location.reload()}
+const localSettings=settingsHtml;
+settingsHtml=function(){return localSettings().replace(/<a class="btn small" href="\/signout-with-chatgpt[^"]*" target="_top">Sign out<\/a>/,'<button class="btn small" onclick="signOutLocal()">Sign out</button>')};
+if(ready)render();
