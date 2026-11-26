@@ -1,3 +1,4 @@
+import {supportAPI} from '../../../lib/smartqr-support.mjs';
 import {billingAPI} from '../../../lib/smartqr-billing.mjs';
 import {crmAPI} from '../../../lib/smartqr-crm.mjs';
 import {marketingAPI} from '../../../lib/smartqr-marketing.mjs';
@@ -8,6 +9,7 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname.startsWith('/api/smartqr/support/'))return supportAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/billing/'))return billingAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/crm/'))return crmAPI(req,env);
  if(/^\/api\/smartqr\/marketing\/(subscribe|confirm|unsubscribe|stats|export)$/.test(url.pathname))return marketingAPI(req,env);

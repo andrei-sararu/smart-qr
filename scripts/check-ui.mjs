@@ -5,5 +5,5 @@ for(const s of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(s[1]
 new vm.Script(readFileSync(new URL('../ui/live.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/marketing.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/growth.js',import.meta.url),'utf8'));
-for(const name of ['smartqr.html','smartqr-account.html','smartqr-admin.html']){const page=readFileSync(new URL('../ui/'+name,import.meta.url),'utf8');for(const s of page.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(s[1]);}
+for(const name of ['smartqr.html','smartqr-account.html','smartqr-admin.html','smartqr-support.html']){const page=readFileSync(new URL('../ui/'+name,import.meta.url),'utf8');for(const s of page.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(s[1]);}
 console.log('Browser scripts parse successfully.');

@@ -64,6 +64,13 @@
       "when": 1794184484499,
       "tag": "0008_smartqr_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794184484500,
+      "tag": "0009_smartqr_support",
+      "breakpoints": true
     }
   ]
 }
