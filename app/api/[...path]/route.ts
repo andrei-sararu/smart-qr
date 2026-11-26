@@ -1,3 +1,5 @@
+import {makePayload} from '../../../lib/smartqr-payloads.mjs';
+import {qrOptions} from '../../../lib/smartqr-plans.mjs';
 import {supportAPI} from '../../../lib/smartqr-support.mjs';
 import {billingAPI} from '../../../lib/smartqr-billing.mjs';
 import {crmAPI} from '../../../lib/smartqr-crm.mjs';
@@ -9,6 +11,15 @@ import QRCode from 'qrcode';
 export const dynamic='force-dynamic';
 export async function GET(req:Request){
  const url=new URL(req.url);
+ if(url.pathname==='/api/smartqr/tools/generate'&&req.method==='POST'){
+  if(req.headers.get('origin')!==url.origin||req.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Invalid origin'},{status:403});
+  try{
+   const raw=await req.text();if(raw.length>4096)return Response.json({error:'Too large'},{status:413});
+   const data=JSON.parse(raw);if(data.type==='wifi')return Response.json({error:'Wi-Fi QR requires local generation'},{status:400});const payload=makePayload(data),options=qrOptions(data);
+   const svg=await QRCode.toString(payload,{type:'svg',...options});
+   return new Response(svg,{headers:{'content-type':'image/svg+xml','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+  }catch{return Response.json({error:'Invalid QR content or appearance'},{status:400,headers:{'cache-control':'no-store'}})}
+ }
  if(url.pathname.startsWith('/api/smartqr/support/'))return supportAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/billing/'))return billingAPI(req,env);
  if(url.pathname.startsWith('/api/smartqr/crm/'))return crmAPI(req,env);
