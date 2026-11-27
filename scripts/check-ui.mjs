@@ -6,4 +6,5 @@ new vm.Script(readFileSync(new URL('../ui/live.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/marketing.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/growth.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/suite.js',import.meta.url),'utf8'));
+new vm.Script(readFileSync(new URL('../ui/options.js',import.meta.url),'utf8'));
 console.log('Browser scripts parse successfully.');

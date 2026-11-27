@@ -70,7 +70,7 @@ test('guest dish lists validate the live menu, deduplicate and show only on the 
  assert.equal(request.status,201);
  assert.equal((await send([{id:product.id,quantity:1}])).data.alreadyOpen,true);
  const board=(await call('workspace')).data.requests;
- assert.deepEqual(board[0].items,[{name:'Soup',quantity:2}]);
+ assert.deepEqual(board[0].items,[{name:'Soup',quantity:2,unitPrice:7,currency:'EUR'}]);
  assert.equal(board[0].tableNumber,t.number);
  const guest=(await call('public/'+r.slug+'?table='+t.token,'GET',null,null)).data.requests;
  assert.equal(guest[0].type,'OrderReady');
@@ -166,7 +166,7 @@ test('A claimed dish list becomes one order and advances through preparation and
   assert.equal((await call('orders/confirm','POST',{requestId})).status,409);
   let snapshot=(await call('workspace')).data;
   assert.equal(snapshot.requests[0].status,'done');
-  assert.deepEqual(snapshot.orders[0].items,[{name:'Soup',quantity:2}]);
+  assert.deepEqual(snapshot.orders[0].items,[{name:'Soup',quantity:2,unitPrice:7,currency:'EUR'}]);
   assert.equal((await call('orders/'+requestId,'PATCH',{status:'served'})).status,409);
   assert.equal((await call('orders/'+requestId,'PATCH',{status:'preparing',restaurantId:r.id},'outsider')).status,404);
   const invite=await call('team','POST',{label:'Kitchen'});
@@ -175,4 +175,39 @@ test('A claimed dish list becomes one order and advances through preparation and
   assert.equal((await call('orders/'+requestId,'PATCH',{status:'served'})).status,200);
   snapshot=(await call('workspace')).data;
   assert.equal(snapshot.orders[0].status,'served');
+});
+
+test('Options and allergen declarations round-trip and the server snapshots customised prices',async()=>{
+  const {r,t}=await publish();
+  const configured={...product,variants:[{id:'large',name:'Large',price:9.5}],extras:[{id:'bread',name:'Bread',price:1.25}],allergenCodes:['celery','gluten']};
+  assert.equal((await call('restaurant','PUT',{name:r.name,currency:'GBP',items:[configured],published:true,revision:r.revision})).status,200);
+  const publicMenu=(await call('public/'+r.slug,'GET',null,null)).data.restaurant;
+  assert.deepEqual(publicMenu.items[0].allergenCodes,['celery','gluten']);
+  assert.throws(()=>validateItems([{...configured,allergenCodes:['invented']}],30));
+  const send=items=>call('request','POST',{token:t.token,type:'OrderReady',items},null);
+  assert.equal((await send([{id:product.id,quantity:1}])).status,400);
+  assert.equal((await send([{id:product.id,quantity:1,variantId:'large',extraIds:['bread','bread']}])).status,400);
+  const res=await send([{id:product.id,quantity:2,variantId:'large',extraIds:['bread'],unitPrice:0.01}]);
+  assert.equal(res.status,201);
+  const workspace=(await call('workspace')).data;
+  assert.deepEqual(workspace.requests[0].items,[{name:'Soup (Large, Bread)',quantity:2,unitPrice:10.75,currency:'GBP'}]);
+});
+
+test('Confirmed rounds accrue to the table until staff closes the served bill',async()=>{
+  const {t}=await publish();
+  const orderIds=[];
+  for(let round=0;round<2;round++){
+    const order=await call('request','POST',{token:t.token,type:'OrderReady',items:[{id:product.id,quantity:1}]},null);
+    const requestId=order.data.request.id;
+    await call('request/'+requestId,'PATCH',{status:'taken'});
+    await call('orders/confirm','POST',{requestId});
+    await call('orders/'+requestId,'PATCH',{status:'preparing'});
+    orderIds.push(requestId);
+  }
+  const bill=(await call('orders')).data.bills[0];
+  assert.deepEqual(bill.totals,{EUR:1400});
+  assert.equal((await call('orders/settle','POST',{tableId:bill.tableId,orderIds})).status,409);
+  for(const orderId of orderIds)await call('orders/'+orderId,'PATCH',{status:'served'});
+  assert.equal((await call('orders/settle','POST',{tableId:bill.tableId,orderIds})).status,200);
+  assert.deepEqual((await call('orders')).data.bills,[]);
 });

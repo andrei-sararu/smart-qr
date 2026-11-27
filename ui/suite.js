@@ -132,11 +132,31 @@ function orderQueue(orders){
   return `<section class="suite-orders"><h2>Confirmed orders</h2>
     ${orders.length?orders.map(order=>{
       const next=order.status==='confirmed'?'preparing':order.status==='preparing'?'served':'';
-      return `<article class="staff-row"><div><strong>${esc(order.tableLabel||'Table '+order.tableNumber)} · ${esc(order.status)}</strong><ul>${order.items.map(item=>`<li>${item.quantity} × ${esc(item.name)}</li>`).join('')}</ul></div>
+      return `<article class="staff-row"><div><strong>${esc(order.tableLabel||'Table '+order.tableNumber)} · ${esc(order.status)}</strong><ul>${order.items.map(item=>`<li>${orderLineText(item)}</li>`).join('')}</ul></div>
         ${next?`<button class="btn small" data-id="${esc(order.id)}" onclick="changeOrder(this,'${next}')">${next==='preparing'?'Start preparation':'Mark served'}</button>`:''}
       </article>`;
     }).join(''):'<p class="muted">No confirmed orders yet.</p>'}
   </section>`;
+}
+function tableBills(bills){
+  return `<section class="suite-orders"><h2>Open table bills</h2>
+    <p class="muted">Confirmed orders are grouped by table. Take payment through your till, then close the bill here.</p>
+    ${bills.length?bills.map(bill=>`<article class="staff-row"><div><strong>${esc(bill.tableLabel||'Table '+bill.tableNumber)}</strong>
+      <p>${bill.orders.length} confirmed ${bill.orders.length===1?'order':'orders'}</p>
+      ${bill.hasUnpricedItems?'<p>Some orders have no recorded price. Check the total in your till.</p>':`<p>${Object.entries(bill.totals).map(([currency,value])=>esc(formatMenuPrice(value/100,currency,'en-GB'))).join(' + ')}</p>`}</div>
+      <button class="btn small" data-table="${esc(bill.tableId)}" onclick="settleTableBill(this)" ${bill.orders.some(order=>order.status!=='served')?'disabled':''}>Close after payment</button></article>`).join(''):'<p class="muted">No open table bills.</p>'}
+  </section>`;
+}
+async function settleTableBill(button){
+  const staff=view==='staff';
+  const bill=(staff?staffData.bills:ownerBills).find(item=>item.tableId===button.dataset.table);
+  if(!bill||!confirm('Confirm that this table’s bill has been paid in your till.'))return;
+  button.disabled=true;
+  try{
+    await api('orders/settle','POST',{restaurantId:staff?staffParams().get('venue'):undefined,tableId:bill.tableId,orderIds:bill.orders.map(order=>order.id)});
+    if(staff)await loadStaffView();else await workspace();
+  }catch(error){toast(error.message)}
+  finally{button.disabled=false}
 }
 function staffPage(){
   if(!session)return accountForm();
@@ -161,9 +181,9 @@ function staffPage(){
     <p class="muted">Keep the board open. Confirm dish lists at the table. Use the order queue to track preparation and service.</p>
     ${pending.length?pending.map(entry=>`<article class="staff-row"><div><strong>${esc(entry.tableLabel||'Table '+entry.table)} · ${requestLabel(entry.type)}</strong>
       <p class="muted">${entry.status==='taken'?'Claimed by staff':isOverdue(entry)?'Waiting over 3 minutes':'Waiting for staff'}</p>
-      ${entry.items.length?`<ul>${entry.items.map(item=>`<li>${item.quantity} × ${esc(item.name)}</li>`).join('')}</ul>`:''}</div>
+      ${entry.items.length?`<ul>${entry.items.map(item=>`<li>${orderLineText(item)}</li>`).join('')}</ul>`:''}</div>
       <div class="actions">${confirmOrderButton(entry)}<button class="btn ${entry.status==='new'?'primary':''}" data-id="${esc(entry.id)}" data-next="${entry.status==='new'?'taken':'done'}" onclick="staffAdvance(this)">${entry.status==='new'?'Take request':'Mark resolved'}</button></div>
-    </article>`).join(''):'<p>No open requests.</p>'}${orderQueue(staffData.orders)}</main>`;
+    </article>`).join(''):'<p>No open requests.</p>'}${orderQueue(staffData.orders)}${tableBills(staffData.bills)}</main>`;
 }
 function downloadDishLists(requests){
   const csvValue=value=>{
@@ -171,10 +191,10 @@ function downloadDishLists(requests){
     return '"'+(/^[\s]*[=+\-@]|^[\t\r\n]/.test(text)?"'"+text:text).replaceAll('"','""')+'"';
   };
   const rows=requests.filter(entry=>entry.type==='OrderReady'&&entry.status!=='new').flatMap(entry=>(entry.items||[]).map(item=>[
-    entry.id,entry.tableLabel||'Table '+entry.table,new Date(entry.at).toISOString(),entry.status,item.name,item.quantity
+    entry.id,entry.tableLabel||'Table '+entry.table,new Date(entry.at).toISOString(),entry.status,item.name,item.quantity,item.unitPrice??'',item.currency??''
   ]));
   if(!rows.length)return toast('There are no claimed or resolved dish lists to export.');
-  const csv=[['Request ID','Table','Received (UTC)','Status','Product','Quantity'],...rows].map(row=>row.map(csvValue).join(',')).join('\r\n');
+  const csv=[['Request ID','Table','Received (UTC)','Status','Product','Quantity','Unit price','Currency'],...rows].map(row=>row.map(csvValue).join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   Object.assign(document.createElement('a'),{href:url,download:'smart-qr-dish-lists.csv'}).click();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
@@ -206,8 +226,8 @@ serviceHtml=function(pending){
   if(!restaurant.service)return board;
   const ready=pending.filter(entry=>entry.status==='taken'&&entry.type==='OrderReady'&&entry.items?.length);
   return `<div class="actions"><a class="btn small" href="/#team">Manage team</a><button class="btn small" onclick="enableServiceNotifications()">Enable desktop alerts</button><button class="btn small" onclick="downloadDishLists(state.calls)">Export dish lists CSV</button></div>
-    ${ready.length?`<section class="card"><h3>Dish lists ready to confirm</h3>${ready.map(entry=>`<div class="staff-row"><div><strong>${esc(entry.tableLabel||'Table '+entry.table)}</strong><ul>${entry.items.map(item=>`<li>${item.quantity} × ${esc(item.name)}</li>`).join('')}</ul></div>${confirmOrderButton(entry)}</div>`).join('')}</section>`:''}
-    ${board}${orderQueue(ownerOrders)}`;
+    ${ready.length?`<section class="card"><h3>Dish lists ready to confirm</h3>${ready.map(entry=>`<div class="staff-row"><div><strong>${esc(entry.tableLabel||'Table '+entry.table)}</strong><ul>${entry.items.map(item=>`<li>${orderLineText(item)}</li>`).join('')}</ul></div>${confirmOrderButton(entry)}</div>`).join('')}</section>`:''}
+    ${board}${orderQueue(ownerOrders)}${tableBills(ownerBills)}`;
 };
 const suiteSettings=settingsHtml;
 settingsHtml=function(){
@@ -254,7 +274,8 @@ function suitePlanComparison(){
   const sections=[
     ['Digital QR menu',[
       ['Products per venue',['30','1,000','1,000']],
-      ['Photos, allergen fields, themes and brand colours',included],
+      ['Photos, variants, extras and UK allergen declarations',included],
+      ['Menu themes and brand colours',included],
       ['Venue logo on digital and printed menus',paid],
       ['Smart QR branding removed from the guest menu',paid]
     ]],
@@ -272,7 +293,7 @@ function suitePlanComparison(){
     ]],
     ['Table service & staff board',[
       ['Waiter and bill requests from table QR codes',service],
-      ['Dish lists and confirmed order queue',service],
+      ['Dish lists, confirmed orders and open table bills',service],
       ['Staff accounts, desktop alerts and dish-list CSV export',service]
     ]],
     ['Service insights',[
@@ -294,12 +315,12 @@ function suitePlanComparison(){
 function suitePricing(){
   return `<div class="suite-pricing"><div class="suite-section-head">
     <div><h1>Smart QR plans</h1><p>One plan per venue. Start with a 14-day Service trial and keep a Free menu afterwards.</p></div>
-    <div class="switcher" aria-label="Billing period"><button class="${annual?'':'active'}" aria-pressed="${!annual}" onclick="annual=false;render()">Monthly</button><button class="${annual?'active':''}" aria-pressed="${annual}" onclick="annual=true;render()">Yearly</button></div>
+    <div><label>Billing currency<select onchange="billingCurrency=this.value;render()"><option value="gbp" ${billingCurrency==='gbp'?'selected':''}>GBP (£)</option><option value="eur" ${billingCurrency==='eur'?'selected':''}>EUR (€)</option></select></label><div class="switcher" aria-label="Billing period"><button class="${annual?'':'active'}" aria-pressed="${!annual}" onclick="annual=false;render()">Monthly</button><button class="${annual?'active':''}" aria-pressed="${annual}" onclick="annual=true;render()">Yearly</button></div></div>
   </div>
   ${billingReady?'':`<p class="suite-plan-notice">Paid checkout is currently unavailable. You can start a Free menu and try Service for 14 days.</p>`}
   <div class="suite-plan-grid">${suitePlans.map(plan=>`<article class="suite-plan ${plan.name==='Service'?'suite-plan-service':''}">
     <h2>${plan.name}</h2><p>${plan.description}</p>
-    <div class="suite-plan-price">€${plan.price&&annual?plan.price*10:plan.price}<span> / ${plan.price&&annual?'year':'month'}</span></div>
+    <div class="suite-plan-price">${billingCurrency==='gbp'?'£':'€'}${plan.price&&annual?plan.price*10:plan.price}<span> / ${plan.price&&annual?'year':'month'}</span></div>
     <ul>${plan.features.filter(item=>assistantReady||item!=='AI menu assistant for guests').map(item=>`<li>${item}</li>`).join('')}</ul>
     ${plan.price&&billingReady?`<button class="btn primary" onclick="choose('${plan.name}')">Choose ${plan.name}</button>`:!plan.price?'<button class="btn primary" onclick="onboard()">Start free</button>':'<a class="btn" href="/#contact">Ask about '+plan.name+'</a>'}
   </article>`).join('')}</div>${suitePlanComparison()}</div>`;
@@ -307,7 +328,7 @@ function suitePricing(){
 pricingHtml=suitePricing;
 
 productCatalogue.find(product=>product.title==='Table service & staff board').features.push(
-  'Confirm dish lists as orders and track preparation and service in Smart QR.',
+  'Confirm dish lists, track preparation and group orders into an open table bill. Take payment through your till.',
   'Invite staff to a service-only workspace and revoke access from the owner account.',
   'Export claimed and resolved dish lists to CSV. Enable desktop notifications while the board stays open.'
 );

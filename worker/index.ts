@@ -46,6 +46,15 @@ async function localAuth(req:Request, env:Cloudflare.Env):Promise<Request|Respon
  const ensureEmailVerification=()=>db.prepare(`CREATE TABLE IF NOT EXISTS smart_email_verification (
   account_id TEXT PRIMARY KEY, token_hash TEXT UNIQUE, expires INTEGER NOT NULL, verified_at INTEGER
  )`).run();
+ const sendAccountEmail=async(email:string,subject:string,text:string)=>{
+  try{
+   const result=await fetch('https://api.resend.com/emails',{
+    method:'POST',headers:{'authorization':'Bearer '+emailConfig.RESEND_API_KEY,'content-type':'application/json'},
+    body:JSON.stringify({from:emailConfig.SMART_QR_FROM_EMAIL,to:[email],subject,text})
+   });
+   return result.ok;
+  }catch{return false}
+ };
  const sendVerification=async(accountId:string,email:string)=>{
   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
   const tokenHash=await hash(token);
@@ -53,13 +62,7 @@ async function localAuth(req:Request, env:Cloudflare.Env):Promise<Request|Respon
     VALUES (?,?,?) ON CONFLICT(account_id) DO UPDATE SET token_hash=excluded.token_hash,expires=excluded.expires
     WHERE verified_at IS NULL`).bind(accountId,tokenHash,Date.now()+60*60*1000).run();
   const link=new URL('/#verify?token='+token,url.origin).href;
-  try{
-   const result=await fetch('https://api.resend.com/emails',{
-    method:'POST',headers:{'authorization':'Bearer '+emailConfig.RESEND_API_KEY,'content-type':'application/json'},
-    body:JSON.stringify({from:emailConfig.SMART_QR_FROM_EMAIL,to:[email],subject:'Verify your Smart QR email',text:'Open this link to verify your Smart QR email address. It expires in one hour.\n\n'+link})
-   });
-   return result.ok;
-  }catch{return false}
+  return sendAccountEmail(email,'Verify your Smart QR email','Open this link to verify your Smart QR email address. It expires in one hour.\n\n'+link);
  };
  if(authPath||cookie){
  await db.prepare('CREATE TABLE IF NOT EXISTS smart_accounts (id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,salt TEXT NOT NULL,password TEXT NOT NULL)').run();
@@ -80,17 +83,56 @@ async function localAuth(req:Request, env:Cloudflare.Env):Promise<Request|Respon
   return updated.meta.changes===1?response({ok:true}):response({error:'This link is invalid or expired. Sign in again to request another email.'},400);
  }
  const email=String(data?.email||'').trim().toLowerCase(),password=String(data?.password||'');
+ if(data?.action==='forgot'&&!emailReady)return response({error:'Password recovery is temporarily unavailable.'},503);
+ if(data?.action==='forgot'||data?.action==='reset'){
+  await db.prepare('CREATE TABLE IF NOT EXISTS smart_password_resets (account_id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, expires INTEGER NOT NULL)').run();
+ }
+ if(data?.action==='forgot'){
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return response({error:'Enter a valid email address.'},400);
+  const account=await db.prepare('SELECT id FROM smart_accounts WHERE email=?').bind(email).first<{id:string}>();
+  if(account){
+   const token=hex(crypto.getRandomValues(new Uint8Array(32)));
+   const tokenHash=await hash(token);
+   const saved=await db.prepare(`INSERT INTO smart_password_resets (account_id,token_hash,expires)
+    VALUES (?,?,?) ON CONFLICT(account_id) DO UPDATE SET token_hash=excluded.token_hash,expires=excluded.expires
+    WHERE smart_password_resets.expires<?`).bind(account.id,tokenHash,now+1800000,now+1740000).run();
+   if(saved.meta.changes){
+    const link=new URL('/#reset-password?token='+token,url.origin).href;
+    const sent=await sendAccountEmail(email,'Reset your Smart QR password','Open this one-time link to choose a new password. It expires in 30 minutes.\n\n'+link);
+    if(!sent)await db.prepare('DELETE FROM smart_password_resets WHERE account_id=? AND token_hash=?').bind(account.id,tokenHash).run();
+   }
+  }
+  return response({ok:true},202);
+ }
+ if(data?.action==='reset'){
+  const token=String(data.token||'');
+  if(!/^[a-f0-9]{64}$/.test(token)||password.length<12||password.length>128)return response({error:'Enter a valid reset link and a password of 12–128 characters.'},400);
+  const tokenHash=await hash(token);
+  const reset=await db.prepare('SELECT account_id FROM smart_password_resets WHERE token_hash=? AND expires>?').bind(tokenHash,now).first<{account_id:string}>();
+  if(!reset)return response({error:'This reset link is invalid or expired.'},400);
+  const salt=hex(crypto.getRandomValues(new Uint8Array(16)));
+  const newPassword=await derive(password,salt);
+  const check='EXISTS (SELECT 1 FROM smart_password_resets WHERE account_id=? AND token_hash=? AND expires>?)';
+  const current=Date.now();
+  const result=await db.batch([
+   db.prepare('UPDATE smart_accounts SET salt=?,password=? WHERE id=? AND '+check).bind(salt,newPassword,reset.account_id,reset.account_id,tokenHash,current),
+   db.prepare('DELETE FROM smart_sessions WHERE account_id=? AND '+check).bind(reset.account_id,reset.account_id,tokenHash,current),
+   db.prepare('DELETE FROM smart_password_resets WHERE account_id=? AND token_hash=? AND expires>?').bind(reset.account_id,tokenHash,current)
+  ]);
+  return result[0].meta.changes===1?response({ok:true}):response({error:'This reset link is invalid or expired.'},400);
+ }
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||password.length<12||password.length>128||!['register','login'].includes(data?.action||''))return response({error:'Enter a valid email and a password of 12–128 characters.'},400);
  let account=await db.prepare('SELECT a.*,v.account_id IS NOT NULL AND v.verified_at IS NULL AS pending FROM smart_accounts a LEFT JOIN smart_email_verification v ON v.account_id=a.id WHERE a.email=?').bind(email).first<{id:string,email:string,salt:string,password:string,pending:number}>();
  if(data?.action==='register'){
   if(account)return response({error:'Unable to create account. Try signing in.'},409);
   const salt=hex(crypto.getRandomValues(new Uint8Array(16))),id=crypto.randomUUID();
+  const passwordHash=await derive(password,salt);
   try{
-   const insert=db.prepare('INSERT INTO smart_accounts VALUES (?,?,?,?)').bind(id,email,salt,await derive(password,salt));
+   const insert=db.prepare('INSERT INTO smart_accounts VALUES (?,?,?,?)').bind(id,email,salt,passwordHash);
    if(emailReady)await db.batch([insert,db.prepare('INSERT INTO smart_email_verification (account_id,expires) VALUES (?,0)').bind(id)]);
    else await insert.run();
   }catch{return response({error:'Unable to create account.'},409)}
-  account={id,email,salt,password:'',pending:Number(emailReady)};
+  account={id,email,salt,password:passwordHash,pending:Number(emailReady)};
  }else{
   const computed=await derive(password,account?.salt||'dummy-salt');
   if(!account||computed!==account.password)return response({error:'Invalid email or password.'},401);
@@ -103,7 +145,10 @@ async function localAuth(req:Request, env:Cloudflare.Env):Promise<Request|Respon
   if(quota.meta.changes!==1)return response({verificationRequired:true,emailSent:false,retry:true},202);
   return response({verificationRequired:true,emailSent:await sendVerification(account.id,email)},202);
  }
- const token=hex(crypto.getRandomValues(new Uint8Array(32)));await db.prepare('INSERT INTO smart_sessions VALUES (?,?,?)').bind(await hash(token),account.id,now+604800000).run();return response({ok:true},200,{'set-cookie':'smart_session='+token+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800'});
+ const token=hex(crypto.getRandomValues(new Uint8Array(32)));
+ const session=await db.prepare('INSERT INTO smart_sessions SELECT ?,id,? FROM smart_accounts WHERE id=? AND password=?').bind(await hash(token),now+604800000,account.id,account.password).run();
+ if(!session.meta.changes)return response({error:'Sign in again with your current password.'},401);
+ return response({ok:true},200,{'set-cookie':'smart_session='+token+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800'});
  }
  if(cookie){const a=await db.prepare('SELECT a.id,a.email FROM smart_sessions s JOIN smart_accounts a ON a.id=s.account_id WHERE s.token=? AND s.expires>?').bind(await hash(cookie),Date.now()).first<{id:string,email:string}>();if(a){h.set('oai-authenticated-user-id',a.id);h.set('oai-authenticated-user-email',a.email)}}
  return new Request(req,{headers:h});

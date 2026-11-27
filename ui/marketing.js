@@ -31,7 +31,8 @@ function helpContent(){
       'In <b>Menu editor</b>, select <b>Add product</b>. Enter the name, category, price, description and verified allergens. Add a photo by uploading JPG, PNG or WebP, or by entering an HTTPS image link.',
       'Select <b>Import products</b> to upload CSV or paste spreadsheet rows with the headers <code>name, price, category</code>. Add <code>description</code> and <code>allergens</code> if available. Choose <b>Review products</b>, then <b>Add products</b>.',
       'For a PDF or photo, choose <b>Extract draft from PDF or photo</b>. Review and correct every suggested price and product. The saved products start hidden. Enter verified allergens and make each product available when ready.',
-      'Use the availability button beside a product to hide it when sold out and show it again later.'
+      'Use <b>Variants and extras</b> for sizes and supplements. Enter the full price of a variant and the extra charge for each add-on.',
+      'Use <b>UK allergen declaration</b> to record verified allergens and add notes where the declaration differs by variant. Use the availability button to hide sold-out products.'
     ]],
     ['languages','Set up guest languages',[
       'Set the original language in <b>Settings</b>. Open a product and expand <b>Translations</b>.',
@@ -57,7 +58,7 @@ function helpContent(){
     ['service','Receive waiter, dish list and bill requests',[
       'Keep <b>Service board</b> open on a charged, connected tablet. Select <b>Enable sound</b> after opening or reloading the board.',
       'With Service active, guests scan a table-specific QR, browse the menu and can call a waiter, request the bill or send a list of dishes with quantities.',
-      'The team selects <b>Take request</b>. For a dish list, confirm it with the guest, then choose <b>Confirm order</b>. Use <b>Confirmed orders</b> to start preparation and mark it served. Use the till for billing and payment.',
+      'The team selects <b>Take request</b>. For a dish list, confirm it with the guest, then choose <b>Confirm order</b>. Use <b>Confirmed orders</b> to start preparation and mark it served. Use <b>Open table bills</b> to see confirmed orders grouped by table. Take payment through your till and then select <b>Close after payment</b> once all orders have been served.',
       'Unclaimed requests are highlighted after three minutes. The open board can play an alert, and supported desktop browsers can show notifications when the board tab is in the background. Use <b>Service pulse</b> to check response times and menu details.'
     ]],
     ['team','Give staff access to the service board',[

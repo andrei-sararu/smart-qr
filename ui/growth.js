@@ -38,7 +38,7 @@ const productCatalogue=[
   {
     title:'Digital QR menu', plan:'Included in Free',
     summary:'Give guests a mobile menu they can open from a printed QR code or a link. Update the menu during service and keep the same printed code.',
-    features:['Organise dishes by category with photos, prices and verified allergen information.','Hide sold-out items and publish changes from the menu editor.','Choose a theme, accent colour and typography. Add your venue logo with a paid Menu Pro or Service subscription.'],
+    features:['Organise dishes with photos, variants, priced extras and structured UK allergen declarations.','Hide sold-out items and publish changes from the menu editor.','Choose a theme, accent colour and typography. Add your venue logo with a paid Menu Pro or Service subscription.'],
     href:'/#demo', action:'Try the guest menu'
   },
   {
@@ -131,7 +131,7 @@ if(ready)render();
 const clearHome=home;
 home=function(){return clearHome().replace('Great service starts<br>with a <em>smart menu.</em>','QR code menus &amp;<br><em>table service.</em>').replace('Give guests a beautiful digital menu and your team a simpler way to manage table requests. All from one QR code.','Smart QR is a digital menu platform for restaurants, cafés and hotels. Create your menu, print a QR code for each table and receive waiter and bill requests on your staff’s devices.').replace('ONE PLATFORM. LESS ADMIN.','HOW SMART QR WORKS')};
 let accountMode='login';
-function accountForm(){return `<main class="wrap section"><div class="card" style="max-width:440px;margin:20px auto;padding:30px"><h2>${accountMode==='register'?'Create your account':'Sign in to Smart QR'}</h2><p class="muted">Manage your restaurant and digital menus.</p><form onsubmit="submitAccount(event)"><label>Email address<input name="email" type="email" required autocomplete="email" maxlength="254"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="${accountMode==='register'?'new-password':'current-password'}"></label><p class="fine">Use a password of at least 12 characters.</p><button class="btn primary" type="submit">${accountMode==='register'?'Create account':'Sign in'}</button><p id="account-error" role="alert"></p></form><button class="btn" onclick="accountMode=accountMode==='login'?'register':'login';render()">${accountMode==='login'?'New here? Create an account':'Already registered? Sign in'}</button></div></main>`};
+function accountForm(){return `<main class="wrap section"><div class="card" style="max-width:440px;margin:20px auto;padding:30px"><h2>${accountMode==='register'?'Create your account':'Sign in to Smart QR'}</h2><p class="muted">Manage your restaurant and digital menus.</p><form onsubmit="submitAccount(event)"><label>Email address<input name="email" type="email" required autocomplete="email" maxlength="254"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="${accountMode==='register'?'new-password':'current-password'}"></label><p class="fine">Use a password of at least 12 characters.</p><button class="btn primary" type="submit">${accountMode==='register'?'Create account':'Sign in'}</button><p id="account-error" role="alert"></p></form><button class="btn" onclick="accountMode=accountMode==='login'?'register':'login';render()">${accountMode==='login'?'New here? Create an account':'Already registered? Sign in'}</button>${accountMode==='login'&&emailVerificationReady?'<p><a class="btn" href="/#reset-password">Forgot password?</a></p>':''}</div></main>`};
 const standaloneDashboard=dashboard;
 dashboard=function(){return session?standaloneDashboard():accountForm()};
 const standaloneOnboard=onboard;
@@ -275,7 +275,9 @@ async function downloadPrintable(e,kind,table,logo){
           if(y+120>bottom){finishPage();newPage()}
           line(item.name+' — '+money(item.price),30,700);
           if(item.desc)line(item.desc,25);
-          if(item.allergens)line('Allergens: '+item.allergens,23);
+          line('Allergens: '+allergenDisplay(item,item.allergens),23);
+          for(const option of item.variants||[])line(option.name+' · '+money(option.price),23);
+          for(const option of item.extras||[])line(option.name+' · +'+money(option.price),23);
           y+=12;
         }
         y+=20;

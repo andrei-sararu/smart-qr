@@ -127,3 +127,14 @@ body { font-family: "Manrope", system-ui, sans-serif; }
 .suite-comparison th[scope=row] { font-weight: 600; }
 .suite-comparison tbody:last-child tr:last-child > * { border-bottom: 0; }
 .suite-comparison p a { color: var(--brand-hover); font-weight: 700; }
+
+.menu-product-options { margin: 14px 0; }
+.menu-product-options summary { cursor: pointer; font-weight: 700; }
+.menu-product-options fieldset, #overlay form fieldset { border: 1px solid var(--line); border-radius: 10px; margin: 10px 0; }
+.menu-option-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(70px, .5fr) auto; gap: 8px; align-items: end; }
+.menu-option-row label { margin: 0; }
+.menu-option-row .btn { margin-bottom: 10px; }
+.allergen-select-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 4px 10px; }
+.allergen-select-grid label { margin: 0; }
+.menu-product-options input[type=checkbox] { width: auto; margin: 0 5px 0 0; }
+.qr-menu-product-body > .btn { margin-top: 10px; }
