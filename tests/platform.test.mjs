@@ -69,3 +69,22 @@ test('Static QR is immutable and a dynamic QR changes destination without reprin
   assert.equal((await call(path)).headers.get('location'),'https://example.org/second');
   assert.equal((await call('/api/platform','POST',{...profile,actions:[{label:'Bad',url:'javascript:alert(1)'}]})).status,400);
 });
+
+test('Project metadata and expiry are scoped, versioned and preserve the QR address',async()=>{
+  const {call}=fixture();
+  const {id}=await (await call('/api/platform','POST',profile)).json();
+  const admin='/api/platform/'+id,scan='/q/'+id;
+  const initial=(await (await call('/api/platform')).json()).profiles[0];
+  assert.deepEqual([initial.project,initial.tags,initial.expires],['',[],null]);
+  const expired={...profile,project:'Riverside',tags:['Maintenance','Boilers','Boilers'],expires:1,revision:1};
+  assert.equal((await call(admin,'PUT',expired,'someone-else')).status,404);
+  assert.equal((await call(admin,'PUT',expired)).status,200);
+  assert.equal((await call(scan,'GET',undefined,null)).status,404);
+  assert.equal((await call(admin,'PUT',{...expired,project:'Stale'})).status,409);
+  const dashboard=await (await call('/api/platform')).json();
+  assert.deepEqual([dashboard.profiles[0].project,dashboard.profiles[0].tags],['Riverside',['Maintenance','Boilers']]);
+  const history=await (await call(admin+'/history')).json();
+  assert.equal(history.history[0].profile.expires,1);
+  assert.equal((await call(admin,'PUT',{...expired,expires:null,revision:2})).status,200);
+  assert.equal((await call(scan,'GET',undefined,null)).status,200);
+});

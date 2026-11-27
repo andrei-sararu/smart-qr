@@ -21,6 +21,12 @@ First release stores profiles, events, reports and revisions with owner scope. A
 
 Use outbound integrations only through a queue with authenticated, bounded delivery, redirect restrictions, destination validation, encrypted secrets and secret rotation. Never put credentials or non-public documents into unauthenticated scan pages. Require verified domain ownership before custom domains, and version public destination changes with tenant scope and incident history.
 
+## Portfolio controls
+
+Codes can be grouped by a project name and tagged. These labels are scoped to the signed-in owner and searchable in the workspace. Cloning opens an editable copy with a new scan identity on save. Dynamic copies default to paused, and an expiry is never copied. The workspace exports code definitions in JSON, without reports or scan records.
+
+Project, tag and UTC expiry settings are stored separately and committed with code changes and revision history. Existing records need no backfill. Server-side expiry applies to profile views, actions and form submissions, and to dynamic redirects. Removing expiry restores the same printed link when the code is active. Static links are fixed and independently scannable.
+
 ## Proposed platform tiers
 
 Free covers static codes and limited dynamic QR. Pro adds branding, profiles and forms. Business adds assets, teams, workflows, API, webhooks and domains. Enterprise adds identity, governance, retention and SLAs. These are packaging hypotheses. Existing hospitality plans stay independent and unshipped platform entitlements should not appear as purchasable functionality.
