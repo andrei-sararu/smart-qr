@@ -243,10 +243,54 @@ render=function(){
 
 
 const suitePlans=[
-  {name:'Free',price:0,description:'For a venue publishing its first QR menu.',features:['30 products with photos and allergen fields','General QR code and a shareable menu link','Menu themes, translations and printable menu PDF']},
-  {name:'Menu Pro',price:12,description:'For a venue that wants a larger, branded menu.',features:['1,000 products','Venue logo on digital and printed menus','AI menu assistant for guests','Menu view count']},
-  {name:'Service',price:29,description:'For a floor team handling requests across multiple tables.',features:['Everything in Menu Pro','Named table QR codes, guest dish lists and confirmed orders','Separate staff accounts and shared service board','Desktop alerts while the board is open','Dish-list CSV export and service insights']}
+  {name:'Free',price:0,description:'For a venue publishing its first QR menu.',features:['30 products with photos and allergen fields','Menu link, printable menu PDF and QR codes','Menu themes, imports and translations']},
+  {name:'Menu Pro',price:12,description:'For a venue that wants a larger, branded menu.',features:['1,000 products','Venue logo on digital and printed menus','AI menu assistant for guests','Smart QR branding removed from the guest menu']},
+  {name:'Service',price:29,description:'For a floor team handling requests across multiple tables.',features:['Everything in Menu Pro','Guest requests, dish lists and confirmed orders','Separate staff accounts and shared service board','Desktop alerts while the board is open','Dish-list CSV export and service response tracking']}
 ];
+function suitePlanComparison(){
+  const included=['Included','Included','Included'];
+  const paid=['—','Included','Included'];
+  const service=['—','—','Included'];
+  const sections=[
+    ['Digital QR menu',[
+      ['Products per venue',['30','1,000','1,000']],
+      ['Photos, allergen fields, themes and brand colours',included],
+      ['Venue logo on digital and printed menus',paid],
+      ['Smart QR branding removed from the guest menu',paid]
+    ]],
+    ['Menu import & translation',[
+      ['CSV and spreadsheet imports',included],
+      ['Guest language selector and saved translations',included],
+      ['PDF or photo import and AI translation drafts',assistantReady?included:['Temporarily unavailable','Temporarily unavailable','Temporarily unavailable']]
+    ]],
+    ['Print & table QR codes',[
+      ['Menu PDF and general QR code',included],
+      ['Named table QR codes for browsing (up to 100)',included]
+    ]],
+    ['Guest menu assistant',[
+      ['AI search of the published menu',assistantReady?paid:['—','Temporarily unavailable','Temporarily unavailable']]
+    ]],
+    ['Table service & staff board',[
+      ['Waiter and bill requests from table QR codes',service],
+      ['Dish lists and confirmed order queue',service],
+      ['Staff accounts, desktop alerts and dish-list CSV export',service]
+    ]],
+    ['Service insights',[
+      ['Menu completeness and menu view count',included],
+      ['Request volumes and response times',service]
+    ]]
+  ];
+  return `<section class="suite-comparison" aria-labelledby="compare-plans-title">
+    <h2 id="compare-plans-title">Compare plan features</h2>
+    <div class="suite-comparison-scroll" role="region" aria-labelledby="compare-plans-title" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Product and features</th>${suitePlans.map(plan=>`<th scope="col">${plan.name}</th>`).join('')}</tr></thead>
+        ${sections.map(([title,rows])=>`<tbody><tr class="suite-comparison-group"><th colspan="4" scope="rowgroup">${title}</th></tr>${rows.map(([feature,values])=>`<tr><th scope="row">${feature}</th>${values.map(value=>`<td>${value==='—'?'<span aria-label="Not included">—</span>':value}</td>`).join('')}</tr>`).join('')}</tbody>`).join('')}
+      </table>
+    </div>
+    <p class="muted">Want to see how each feature works? <a href="/#products">Explore the products</a>.</p>
+  </section>`;
+}
 function suitePricing(){
   return `<div class="suite-pricing"><div class="suite-section-head">
     <div><h1>Smart QR plans</h1><p>One plan per venue. Start with a 14-day Service trial and keep a Free menu afterwards.</p></div>
@@ -258,7 +302,7 @@ function suitePricing(){
     <div class="suite-plan-price">€${plan.price&&annual?plan.price*10:plan.price}<span> / ${plan.price&&annual?'year':'month'}</span></div>
     <ul>${plan.features.filter(item=>assistantReady||item!=='AI menu assistant for guests').map(item=>`<li>${item}</li>`).join('')}</ul>
     ${plan.price&&billingReady?`<button class="btn primary" onclick="choose('${plan.name}')">Choose ${plan.name}</button>`:!plan.price?'<button class="btn primary" onclick="onboard()">Start free</button>':'<a class="btn" href="/#contact">Ask about '+plan.name+'</a>'}
-  </article>`).join('')}</div></div>`;
+  </article>`).join('')}</div>${suitePlanComparison()}</div>`;
 }
 pricingHtml=suitePricing;
 
@@ -268,7 +312,7 @@ productCatalogue.find(product=>product.title==='Table service & staff board').fe
   'Export claimed and resolved dish lists to CSV. Enable desktop notifications while the board stays open.'
 );
 productCatalogue.push({
-  title:'Guest menu assistant',plan:'Menu Pro & Service',
+  title:'Guest menu assistant',plan:'From Menu Pro',
   summary:'Help guests find dishes and drinks by describing what they want directly from the menu.',
   features:['Search the published menu by dish, flavour or budget.','See suggestions with the restaurant’s published name and price.','Ask the restaurant team about allergies and dietary safety.'],
   href:'/#pricing',action:'Compare plans'
@@ -276,7 +320,7 @@ productCatalogue.push({
 const suiteProducts=productsPage;
 productsPage=function(){
   const assistant=productCatalogue.find(product=>product.title==='Guest menu assistant');
-  assistant.plan=assistantReady?'Menu Pro & Service':'Menu Pro & Service · requires AI availability';
+  assistant.plan=assistantReady?'From Menu Pro':'From Menu Pro · temporarily unavailable';
   return suiteProducts().replace('<section class="quick-start">',`<section class="suite-integration"><h2>Integrations and availability</h2>
     <p>Use the Service board beside your existing POS. Staff confirm the guest’s list in Smart QR and can enter the order in their till for billing. Export dish lists to CSV for follow-up.</p>
     <p>Guests can request the bill and pay the restaurant directly. Contact us about POS integrations, QR payments or alerts that continue after closing the board.</p>

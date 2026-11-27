@@ -101,3 +101,29 @@ body { font-family: "Manrope", system-ui, sans-serif; }
   .suite-section-head, .suite-launch { align-items: start; flex-direction: column; }
   .suite-hero-layout { gap: 20px; }
 }
+
+.product-summary .product-scope {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--brand-tint);
+  color: var(--brand-hover);
+}
+.product-summary .product-scope:hover, .suite-comparison p a:hover { text-decoration: underline; }
+.suite-comparison { margin: 40px 0 12px; }
+.suite-comparison h2 { margin: 0 0 16px; }
+.suite-comparison-scroll {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.suite-comparison-scroll:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; }
+.suite-comparison table { border-collapse: collapse; width: 100%; min-width: 580px; }
+.suite-comparison th, .suite-comparison td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+.suite-comparison thead th { background: var(--suite-navy); color: #fff; }
+.suite-comparison thead th:first-child { width: 52%; }
+.suite-comparison .suite-comparison-group th { background: var(--mint); }
+.suite-comparison th[scope=row] { font-weight: 600; }
+.suite-comparison tbody:last-child tr:last-child > * { border-bottom: 0; }
+.suite-comparison p a { color: var(--brand-hover); font-weight: 700; }

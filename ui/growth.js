@@ -36,33 +36,33 @@ const marketingRoutes={products:[],product:['product','features','languages','ho
 function marketingSection(id){const t=document.createElement('template');t.innerHTML=fullMarketingHome();return t.content.querySelector('#'+id)?.outerHTML||''}
 const productCatalogue=[
   {
-    title:'Digital QR menu', plan:'Free, Menu Pro & Service',
+    title:'Digital QR menu', plan:'Included in Free',
     summary:'Give guests a mobile menu they can open from a printed QR code or a link. Update the menu during service and keep the same printed code.',
     features:['Organise dishes by category with photos, prices and verified allergen information.','Hide sold-out items and publish changes from the menu editor.','Choose a theme, accent colour and typography. Add your venue logo with a paid Menu Pro or Service subscription.'],
     href:'/#demo', action:'Try the guest menu'
   },
   {
-    title:'Menu import & translation', plan:'Menu editor',
+    title:'Menu import & translation', plan:'Included in Free',
     summary:'Bring an existing menu into Smart QR and prepare it for guests who speak different languages.',
     features:['Import a CSV or paste spreadsheet rows, then review categories and prices.','Extract a draft from a PDF or photo and verify the results before making dishes available.','Offer menu controls in 16 languages. Generate editable translations for dish text and enter verified allergen translations yourself.'],
     href:'/#help?topic=products', action:'See the import guide'
   },
   {
-    title:'Print & table QR codes', plan:'Menu PDF, general QR & table cards',
+    title:'Print & table QR codes', plan:'Included in Free',
     summary:'Put the right QR code on your counter, in your window or on each table. Keep printed materials alongside your digital menu.',
-    features:['Download an A4 menu PDF and include your saved venue logo when available.','Use one general QR code for browsing or table-specific codes for the Service workflow.','Configure up to 100 tables with names or numbers, seating capacity and indoor or outdoor areas.'],
+    features:['Download an A4 menu PDF and include your saved venue logo when available.','Print general or table-specific QR codes on any plan. Enable guest requests from a table QR with Service.','Configure up to 100 tables with names or numbers, seating capacity and indoor or outdoor areas.'],
     href:'/#help?topic=tables', action:'See the table setup guide'
   },
   {
-    title:'Table service & staff board', plan:'Service',
+    title:'Table service & staff board', plan:'Included in Service',
     summary:'Let guests ask for service from their table and give staff one board to see which tables are waiting.',
     features:['Guests can call a waiter, request the bill or send a dish list with quantities.','Staff claim requests, confirm the dish list at the table and enter the order in the restaurant’s existing till.','The open staff board highlights unclaimed requests after three minutes and can sound an alert when enabled.'],
     href:'/#product', action:'Try the service demo'
   },
   {
-    title:'Service insights', plan:'Restaurant workspace',
+    title:'Service insights', plan:'Included in Free',
     summary:'Review how quickly your team picks up requests and spot menu entries that need attention.',
-    features:['See request volumes and measured response times in Service pulse.','Review menu completeness, including missing photos, descriptions and allergen information.'],
+    features:['See request volumes and measured response times in Service pulse when your venue uses Service.','Review menu completeness, including missing photos, descriptions and allergen information.'],
     href:'/#help?topic=service', action:'See the service guide'
   }
 ];
@@ -77,7 +77,7 @@ function productsPage(){
     </section>
     <div class="products-grid">
       ${productCatalogue.map(product=>`<article class="product-summary">
-        <span class="product-scope">${product.plan}</span>
+        <a class="product-scope" href="/#pricing" aria-label="${product.title}: ${product.plan}. View pricing.">${product.plan}</a>
         <h2>${product.title}</h2>
         <p>${product.summary}</p>
         <ul>${product.features.map(feature=>`<li>${feature}</li>`).join('')}</ul>
