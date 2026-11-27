@@ -83,7 +83,7 @@ function exportPlatformCodes(){
 }
 function openPlatformImport(){
   modal(`<h2>Bulk import QR codes</h2>
-    <p>Choose a Cotiso QR JSON export. Every code will receive a new identity. Dynamic links and profiles start paused. Expiry dates, reports and scan history are excluded.</p>
+    <p>Choose a Cotiso QR JSON export. Every code will receive a new identity. Dynamic links and profiles start paused. Expiry dates, destination schedules, reports and scan history are excluded.</p>
     <label>QR code export<input type="file" accept=".json,application/json" onchange="previewPlatformImport(this)"></label>
     <div data-import-preview aria-live="polite"></div>`);
 }
@@ -118,7 +118,7 @@ async function previewPlatformImport(input){
 function platformEditor(id,clone=false){
   const source=platformData.profiles.find(profile=>profile.id===id);
   const item=clone?null:source;
-  const values=clone&&source?{...source,title:(source.title.slice(0,92)+' (copy)'),status:'paused',expires:null}:item||{title:'',description:'',reference:'',location:'',mode:'profile',status:'active',actions:[],report:true};
+  const values=clone&&source?{...source,title:(source.title.slice(0,92)+' (copy)'),status:'paused',expires:null,schedule:null}:item||{title:'',description:'',reference:'',location:'',mode:'profile',status:'active',actions:[],report:true};
   modal(`<h2>${item?'Edit QR experience':'Create QR experience'}</h2>
     <form onsubmit="savePlatform(event)" data-id="${item?.id||''}" data-revision="${item?.revision||0}" data-mode="${item?.mode||''}">
       <label>Title<input name="title" required maxlength="100" value="${esc(values.title)}"></label>
@@ -133,6 +133,12 @@ function platformEditor(id,clone=false){
       <label><input type="checkbox" name="report" ${values.report?'checked':''}> Enable the issue report form</label></div>
       <label data-state>Status<select name="status">${['active','paused','archived'].map(key=>`<option ${values.status===key?'selected':''}>${key}</option>`).join('')}</select></label>
       <div data-destinations>${Array.from({length:6},(_,i)=>`<div><label data-action-label>Action ${i+1} label<input name="label" maxlength="60" value="${esc(values.actions[i]?.label||'')}"></label><label>HTTPS destination<input name="url" type="url" maxlength="1000" placeholder="https://example.com" value="${esc(values.actions[i]?.url||'')}" ${values.mode==='static'&&item?'readonly':''}></label></div>`).join('')}</div>
+      <fieldset data-schedule><legend>Scheduled destination</legend>
+        <p class="fine">During this window the QR opens the temporary URL. Outside it, the QR opens the main URL. Enter times in UTC.</p>
+        <label>Temporary HTTPS destination<input type="url" name="schedule-url" maxlength="1000" value="${esc(values.schedule?.url||'')}"></label>
+        <label>Starts (UTC)<input type="datetime-local" name="schedule-start" value="${values.schedule?new Date(values.schedule.starts).toISOString().slice(0,16):''}"></label>
+        <label>Ends (UTC)<input type="datetime-local" name="schedule-end" max="2099-12-31T23:59" value="${values.schedule?new Date(values.schedule.ends).toISOString().slice(0,16):''}"></label>
+      </fieldset>
       <p data-hint class="fine"></p><p role="alert"></p><button class="btn primary">Save experience</button>
     </form>`);
   platformEditorMode(document.querySelector('#overlay form'));
@@ -142,6 +148,9 @@ function platformEditorMode(form){
   form.querySelector('[data-profile-fields]').hidden=mode!=='profile';
   form.querySelector('[data-state]').hidden=mode==='static';
   form.querySelector('[data-expiry]').hidden=mode==='static';
+  const schedule=form.querySelector('[data-schedule]');
+  schedule.hidden=mode!=='dynamic';
+  schedule.disabled=mode!=='dynamic';
   form.querySelectorAll('[data-destinations] > div').forEach((row,index)=>{row.hidden=mode!=='profile'&&index>0});
   form.querySelectorAll('[data-action-label]').forEach(label=>{label.hidden=mode!=='profile'});
   form.querySelector('[data-hint]').textContent=mode==='static'?'Printed static codes open their destination directly. The destination cannot be edited or paused after printing.':mode==='dynamic'?'Edit this destination later without reprinting.':'Add up to six actions, turn on the issue form, or use both. Anyone with the QR can see active profile content.';
@@ -155,7 +164,11 @@ async function savePlatform(event){
   const button=form.querySelector('button');
   button.disabled=true;
   try{
-    await api('platform'+(id?'/'+id:''),id?'PUT':'POST',{title:data.get('title'),description:data.get('description'),reference:data.get('reference'),location:data.get('location'),mode,status:mode==='static'?'active':data.get('status'),actions,project:data.get('project'),tags:String(data.get('tags')||'').split(',').map(tag=>tag.trim()).filter(Boolean),expires:mode!=='static'&&data.get('expires')?Date.parse(data.get('expires')+'Z'):null,report:data.has('report'),revision:Number(form.dataset.revision)});
+    const scheduleFields=['url','start','end'].map(name=>String(data.get('schedule-'+name)||'').trim());
+    const [url,start,end]=scheduleFields;
+    const schedule=mode==='dynamic'&&scheduleFields.some(Boolean)?{url,starts:Date.parse(start+'Z'),ends:Date.parse(end+'Z')}:null;
+    if(schedule&&(!url||!Number.isFinite(schedule.starts)||!Number.isFinite(schedule.ends)))throw Error('Enter the temporary URL, start and end together.');
+    await api('platform'+(id?'/'+id:''),id?'PUT':'POST',{title:data.get('title'),description:data.get('description'),reference:data.get('reference'),location:data.get('location'),mode,status:mode==='static'?'active':data.get('status'),actions,schedule,project:data.get('project'),tags:String(data.get('tags')||'').split(',').map(tag=>tag.trim()).filter(Boolean),expires:mode!=='static'&&data.get('expires')?Date.parse(data.get('expires')+'Z'):null,report:data.has('report'),revision:Number(form.dataset.revision)});
     closeModal();
     await loadPlatform();
     toast('QR experience saved.');
@@ -165,7 +178,7 @@ async function savePlatform(event){
 async function platformHistory(id){
   try{
     const {history}=await api('platform/'+id+'/history');
-    modal(`<h2>Version history</h2>${history.map(entry=>`<details class="card"><summary>Version ${entry.revision} · ${esc(new Date(entry.created).toLocaleString())}</summary><p>${esc(entry.profile.title+' · '+entry.profile.status)}</p><p class="fine">${esc([entry.profile.project,...(entry.profile.tags||[]),entry.profile.expires?'Expires '+new Date(entry.profile.expires).toISOString():''].filter(Boolean).join(' · '))}</p><ul>${entry.profile.actions.map(action=>`<li class="cotiso-report">${esc(action.label+': '+action.url)}</li>`).join('')}</ul></details>`).join('')}`);
+    modal(`<h2>Version history</h2>${history.map(entry=>`<details class="card"><summary>Version ${entry.revision} · ${esc(new Date(entry.created).toLocaleString())}</summary><p>${esc(entry.profile.title+' · '+entry.profile.status)}</p><p class="fine">${esc([entry.profile.project,...(entry.profile.tags||[]),entry.profile.expires?'Expires '+new Date(entry.profile.expires).toISOString():''].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${entry.profile.schedule?esc('Scheduled: '+entry.profile.schedule.url+' · '+new Date(entry.profile.schedule.starts).toISOString()+' to '+new Date(entry.profile.schedule.ends).toISOString()):''}</p><ul>${entry.profile.actions.map(action=>`<li class="cotiso-report">${esc(action.label+': '+action.url)}</li>`).join('')}</ul></details>`).join('')}`);
   }catch(error){toast(error.message)}
 }
 const beforePlatformRender=render;

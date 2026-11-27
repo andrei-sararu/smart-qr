@@ -110,3 +110,32 @@ test('Bulk import validates the entire batch, creates fresh paused codes and enf
   assert.equal((await send(Array.from({length:24},()=>profile))).status,201);
   assert.equal((await list()).length,25);
 });
+
+test('A dynamic code uses its scheduled URL only inside the window and respects lifecycle controls',async()=>{
+  const {call}=fixture();
+  const now=Date.now();
+  const base={...profile,mode:'dynamic'};
+  const schedule={starts:now+3600000,ends:now+7200000,url:'https://example.org/special'};
+  assert.equal((await call('/api/platform','POST',{...profile,schedule})).status,400);
+  assert.equal((await call('/api/platform','POST',{...base,schedule:{...schedule,url:'http://example.org'}})).status,400);
+  const {id}=await (await call('/api/platform','POST',{...base,schedule})).json();
+  const admin='/api/platform/'+id,scan='/q/'+id;
+  const location=async()=>(await call(scan,'GET',undefined,null)).headers.get('location');
+  const update=(revision,changes)=>call(admin,'PUT',{...base,revision,...changes});
+  assert.equal(await location(),'https://example.com/boiler.pdf');
+  const active={...schedule,starts:now-3600000};
+  assert.equal((await update(1,{schedule:active})).status,200);
+  assert.equal(await location(),schedule.url);
+  assert.equal((await update(1,{schedule:null})).status,409);
+  assert.equal(await location(),schedule.url);
+  assert.equal((await update(2,{schedule:active,status:'paused'})).status,200);
+  assert.equal((await call(scan,'GET',undefined,null)).status,404);
+  assert.equal((await update(3,{schedule:active,expires:1})).status,200);
+  assert.equal((await call(scan,'GET',undefined,null)).status,404);
+  assert.equal((await update(4,{schedule:{...active,ends:now-1}})).status,200);
+  assert.equal(await location(),'https://example.com/boiler.pdf');
+  assert.equal((await update(5,{schedule:null})).status,200);
+  const history=await (await call(admin+'/history')).json();
+  assert.equal(history.history[0].profile.schedule,null);
+  assert.equal(history.history[1].profile.schedule.url,schedule.url);
+});

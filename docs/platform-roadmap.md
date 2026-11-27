@@ -28,6 +28,8 @@ A version 1 JSON export can be brought back through Bulk import. Each validated 
 
 Project, tag and UTC expiry settings are stored separately and committed with code changes and revision history. Existing records need no backfill. Server-side expiry applies to profile views, actions and form submissions, and to dynamic redirects. Removing expiry restores the same printed link when the code is active. Static links are fixed and independently scannable.
 
+Dynamic links support one temporary HTTPS destination with a UTC start (inclusive) and end (exclusive). The scan endpoint evaluates the window at request time. Pause and QR expiry take precedence. Clones and imports clear schedules. Changes are recorded in revision history.
+
 ## Proposed platform tiers
 
 Free covers static codes and limited dynamic QR. Pro adds branding, profiles and forms. Business adds assets, teams, workflows, API, webhooks and domains. Enterprise adds identity, governance, retention and SLAs. These are packaging hypotheses. Existing hospitality plans stay independent and unshipped platform entitlements should not appear as purchasable functionality.
