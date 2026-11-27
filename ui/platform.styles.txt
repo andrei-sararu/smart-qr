@@ -34,3 +34,5 @@
 .cotiso-guide-steps summary span{display:inline-grid;place-items:center;min-width:28px;height:28px;background:#e7f4ef;color:#09574c;border-radius:50%;margin-right:4px}
 .cotiso-guide-steps p{line-height:1.6;margin-bottom:0}
 @media(max-width:640px){.cotiso-demo-grid{grid-template-columns:1fr}.cotiso-header .nav{flex-wrap:wrap;justify-content:flex-end}.cotiso-header{height:auto;padding-block:10px}}
+.cotiso-analytics-table{overflow-x:auto}.cotiso-analytics-table .table{min-width:550px}
+#cotiso-analytics .cotiso-metrics{margin-top:16px}#cotiso-analytics summary{cursor:pointer;font-weight:700}

@@ -124,7 +124,6 @@ function platformWorkspace(){
   const term=platformSearch.trim().toLowerCase();
   const visible=profiles.filter(item=>(!selectedProject||item.project===selectedProject)&&[item.title,item.reference,item.location,item.project,...item.tags].some(value=>value.toLowerCase().includes(term)));
   const count=(kind,id)=>events.filter(row=>row.kind===kind&&(!id||row.profile===id)).reduce((sum,row)=>sum+row.total,0);
-  const scanDays=[...new Set(events.map(row=>row.day))].slice(-30);
   return `<main class="wrap cotiso-workspace"><div class="cotiso-dashboard">
     <nav aria-label="Workspace navigation">${Object.entries(platformSections).map(([key,label])=>`<a href="/#platform?tab=${key}" ${section===key?'aria-current="page"':''}>${label}</a>`).join('')}<button type="button" onclick="signOutLocal()">Sign out</button></nav>
     <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>${platformSections[section]}</h1></div>${['overview','codes','help'].includes(section)?'<button class="btn primary" onclick="platformEditor()">Create QR code</button>':''}</div>
@@ -132,8 +131,7 @@ function platformWorkspace(){
     ${section==='restaurants'?`<section class="card"><h2>Your hospitality locations</h2><p class="muted">Each location has its own menu, table QR codes, orders and subscription.</p><div class="actions"><a class="btn primary" href="/#dashboard?locations=1">Manage restaurants & locations</a></div></section>`:''}
     ${section==='company'?platformCompanyForm():''}
     ${section==='help'?`<section class="card"><h2>From setup to your first scan</h2>${steps}<h3>When should I use the optional settings?</h3><p><strong>Projects and tags</strong> help you find codes later. <strong>Expiry</strong> closes access at a UTC date and time. <strong>Scheduled destination</strong> temporarily changes where a dynamic code sends visitors. Codes imported in bulk start paused.</p></section>`:''}
-    <section id="cotiso-analytics" ${section==='analytics'?'':'hidden'}><h2>Activity in the last 30 days</h2><button class="btn small" onclick="loadPlatform()">Refresh analytics</button><div class="cotiso-metrics">${[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']].map(([kind,label])=>`<div><strong>${count(kind)}</strong><span>${label}</span></div>`).join('')}</div><p class="fine">Tracked visits include opened links. Static codes have no visit tracking. Link selections measure clicks.</p>
-    ${scanDays.length?`<details><summary>Visits and outcomes by day</summary><table class="table"><thead><tr><th>Date (UTC)</th><th>Visits</th><th>Reports</th></tr></thead><tbody>${scanDays.map(day=>`<tr><td>${esc(day)}</td>${['scan','complete'].map(kind=>`<td>${events.filter(row=>row.day===day&&row.kind===kind).reduce((sum,row)=>sum+row.total,0)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`:''}</section>
+    <section id="cotiso-analytics" ${section==='analytics'?'':'hidden'}>${section==='analytics'?platformAnalytics(profiles,events):''}</section>
     <section id="cotiso-codes" ${section==='codes'?'':'hidden'}><h2>QR codes and profiles</h2>
     <form class="cotiso-filters" onsubmit="applyPlatformFilters(event)">
       <label>Search<input name="search" type="search" maxlength="100" value="${esc(platformSearch)}" placeholder="Title, asset reference, location or tag"></label>
@@ -144,6 +142,52 @@ function platformWorkspace(){
     </form>${visible.length?visible.map(item=>`<article class="cotiso-code"><div><strong>${esc(item.title)}</strong><p class="fine">${esc(item.reference||item.location||'')} · ${{profile:'Smart profile',dynamic:'Dynamic link',static:'Static link'}[item.mode]} · ${item.mode==='static'?'Fixed destination':item.status==='active'&&item.expires&&item.expires<=Date.now()?'expired':esc(item.status)} · ${count('scan',item.id)} tracked visits</p><p class="fine">${esc([item.project,...item.tags,item.expires?'Expires '+new Date(item.expires).toISOString().slice(0,16).replace('T',' ')+' UTC':''].filter(Boolean).join(' · '))}</p></div><div class="actions"><a class="btn small" href="/api/platform/${item.id}/png">PNG</a><a class="btn small" href="/api/platform/${item.id}/svg">SVG</a>${item.mode==='static'?'':`<a class="btn small" href="/q/${item.id}" target="_blank" rel="noopener noreferrer">Open</a>`}<button class="btn small" onclick="platformEditor('${item.id}')">Edit</button><button class="btn small" onclick="platformEditor('${item.id}',true)">Clone</button><button class="btn small" onclick="platformHistory('${item.id}')">History</button></div></article>`).join(''):profiles.length?'<p>No codes match the selected filters.</p>':'<p>Create a static code, an editable destination, or a Smart QR profile with multiple actions.</p>'}</section>
     <section id="cotiso-inbox" ${section==='reports'?'':'hidden'}>${section==='reports'?platformReports(reports):''}</section></div>
   </div></main>`;
+}
+const analyticsMetrics=[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']];
+let analyticsDays=30,analyticsLocation='';
+function analyticsData(profiles,events,days,location,now=Date.now()){
+  const dates=Array.from({length:days},(_,i)=>new Date(now-(days-1-i)*86400000).toISOString().slice(0,10));
+  const included=profiles.filter(item=>item.mode!=='static'&&(!location||item.location===location));
+  const tally=()=>({scan:0,action:0,start:0,complete:0});
+  const byCode=new Map(included.map(item=>[item.id,{label:item.title,location:item.location,reference:item.reference,...tally()}]));
+  const byDay=new Map(dates.map(date=>[date,tally()]));
+  const byLocation=new Map(),total=tally();
+  for(const event of events){
+    const code=byCode.get(event.profile),day=byDay.get(event.day);
+    if(!code||!day||!Object.hasOwn(total,event.kind))continue;
+    const location=code.location;
+    if(!byLocation.has(location))byLocation.set(location,{label:location||'No location set',...tally()});
+    for(const row of [code,day,total,byLocation.get(location)])row[event.kind]+=event.total;
+  }
+  const ranked=items=>[...items].sort((a,b)=>b.complete-a.complete||b.scan-a.scan||a.label.localeCompare(b.label));
+  return {total,dates,byDay,codes:ranked(byCode.values()),locations:ranked(byLocation.values())};
+}
+function platformAnalytics(profiles,events){
+  const report=analyticsData(profiles,events,analyticsDays,analyticsLocation);
+  const locations=[...new Set(profiles.filter(item=>item.mode!=='static').map(item=>item.location).filter(Boolean))].sort();
+  const table=(title,rows,kind)=>`<section><h3>${title}</h3><div class="cotiso-analytics-table"><table class="table"><thead><tr><th scope="col">${kind}</th>${analyticsMetrics.map(([,label])=>`<th scope="col">${label}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(row=>`<tr><th scope="row">${esc(row.label)}${row.reference||row.location?`<div class="fine">${esc([row.reference,row.location].filter(Boolean).join(' · '))}</div>`:''}</th>${analyticsMetrics.map(([key])=>`<td>${row[key]}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div></section>`;
+  const hasActivity=Object.values(report.total).some(Boolean);
+  return `<h2>Visits and outcomes</h2><div class="cotiso-filters">
+    <label>Period<select onchange="analyticsDays=Number(this.value);render()"><option value="7" ${analyticsDays===7?'selected':''}>Last 7 calendar days</option><option value="30" ${analyticsDays===30?'selected':''}>Last 30 calendar days</option></select></label>
+    <label>Location<select onchange="analyticsLocation=this.value;render()"><option value="">All locations</option>${locations.map(location=>`<option value="${esc(location)}" ${location===analyticsLocation?'selected':''}>${esc(location)}</option>`).join('')}</select></label>
+    <button class="btn small" onclick="loadPlatform()">Refresh analytics</button><button class="btn small" onclick="exportPlatformAnalytics()" ${hasActivity?'':'disabled'}>Export analytics CSV</button>
+    </div><div class="cotiso-metrics">${analyticsMetrics.map(([key,label])=>`<div><strong>${report.total[key]}</strong><span>${label}</span></div>`).join('')}</div>
+    <p class="fine">Dates use UTC and include today. Visits include opened links and repeat visits. Static codes are excluded. Location comes from the code’s current location field.</p>
+    ${hasActivity?`<details><summary>Daily breakdown</summary>${table('Activity by day',report.dates.map(label=>({label,...report.byDay.get(label)})),'Date (UTC)')}</details>
+    ${table('Performance by QR code',report.codes,'Code')}${table('Performance by location',report.locations,'Location')}`:'<p>No activity yet for this selection. Open an active dynamic code or profile to record a visit.</p>'}`;
+}
+function exportPlatformAnalytics(){
+  const {profiles,events}=platformData;
+  const report=analyticsData(profiles,events,analyticsDays,analyticsLocation);
+  const row=(type,label,reference,location,metrics)=>[type,label,reference,location,...analyticsMetrics.map(([key])=>metrics[key])];
+  downloadPlatformCsv('cotiso-analytics.csv',[
+    ['Breakdown','Name or date (UTC)','Reference','Location',...analyticsMetrics.map(([,label])=>label)],
+    ...report.dates.map(date=>row('Date',date,'','',report.byDay.get(date))),
+    ...report.codes.map(code=>row('QR code',code.label,code.reference,code.location,code)),
+    ...report.locations.map(location=>row('Location',location.label,'','',location))
+  ]);
 }
 const reportStates={new:'New',in_progress:'In progress',resolved:'Resolved'};
 let reportFilter='';
@@ -174,16 +218,18 @@ async function savePlatformReport(event){
 }
 function exportPlatformReports(){
   const reports=platformData.reports.filter(report=>!reportFilter||report.status===reportFilter);
+  downloadPlatformCsv('cotiso-reports.csv',[['Report ID','Received (UTC)','Asset','Reference','Location','Status','Message'],
+    ...reports.map(r=>[r.id,new Date(r.created).toISOString(),r.title,r.reference,r.location,reportStates[r.status],r.message])]);
+}
+function downloadPlatformCsv(filename,data){
   const escapeCell=value=>{
     const text=String(value??'');
     const safe=/^[\s]*[=+@-]|^[\t\r\n]/.test(text)?"'"+text:text;
     return '"'+safe.replaceAll('"','""')+'"';
   };
-  const data=[['Report ID','Received (UTC)','Asset','Reference','Location','Status','Message'],
-    ...reports.map(r=>[r.id,new Date(r.created).toISOString(),r.title,r.reference,r.location,reportStates[r.status],r.message])];
   const link=document.createElement('a');
   link.href=URL.createObjectURL(new Blob(['\uFEFF',data.map(row=>row.map(escapeCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
-  link.download='cotiso-reports.csv';
+  link.download=filename;
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 }
