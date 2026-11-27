@@ -3,18 +3,16 @@
   --muted: #526077;
   --cream: #f5f7fb;
   --line: #dce3ed;
-  --green: #a92942;
+  --green: var(--brand-accent);
   --mint: #edf1f8;
   --suite-navy: #111b2f;
-  --suite-accent: #a92942;
 }
 body { font-family: "Manrope", system-ui, sans-serif; }
 .suite-header { min-height: 74px; }
-.suite-header .brand span { letter-spacing: -.055em; }
-.suite-header .brand svg rect:first-child, .site-footer .brand svg rect:first-child { fill: var(--suite-accent); }
-.suite-header .nav a[aria-current=page] { color: var(--suite-accent); }
+.brand span { letter-spacing: -.045em; }
+.suite-header .nav a[aria-current=page] { color: var(--brand-accent); }
 .suite-header .btn.primary, .suite-home .btn.primary, .products-page .btn.primary, .suite-pricing .btn.primary,
-.staff-page .btn.primary { background: var(--suite-accent); border-color: var(--suite-accent); color: #fff; }
+.staff-page .btn.primary { background: var(--brand-accent); border-color: var(--brand-accent); color: #fff; }
 .suite-home h1, .products-page h1, .suite-pricing h1 { letter-spacing: -.055em; }
 .suite-home-hero { background: var(--suite-navy); color: #fff; }
 .suite-hero-layout {
@@ -44,7 +42,7 @@ body { font-family: "Manrope", system-ui, sans-serif; }
 .suite-section-head p { color: var(--muted); margin: 10px 0 0; line-height: 1.6; }
 .suite-home-grid, .suite-plan-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .suite-home-grid h3 { margin: 0 0 10px; font-size: 1.35rem; }
-.suite-text-link { color: var(--suite-accent); font-weight: 800; padding-top: 18px; margin-top: auto; }
+.suite-text-link { color: var(--brand-accent); font-weight: 800; padding-top: 18px; margin-top: auto; }
 .suite-text-link:hover { text-decoration: underline; }
 .suite-launch, .suite-integration {
   background: #e7edf7;
@@ -60,7 +58,7 @@ body { font-family: "Manrope", system-ui, sans-serif; }
 .products-page .products-hero { background: var(--suite-navy); color: #fff; }
 .products-page .products-hero p { color: #c9d4e9; }
 .products-page .products-hero .btn:not(.primary) { background: transparent; color: #fff; border-color: #687890; }
-.products-page .product-scope { color: var(--suite-accent); }
+.products-page .product-scope { color: var(--brand-accent); }
 .suite-plan {
   display: flex;
   align-items: flex-start;
@@ -70,7 +68,7 @@ body { font-family: "Manrope", system-ui, sans-serif; }
   border-radius: 18px;
   padding: clamp(18px,3vw,32px);
 }
-.suite-plan-service { border-color: var(--suite-accent); }
+.suite-plan-service { border-color: var(--brand-accent); }
 .suite-plan h2 { margin: 0; font-size: 1.65rem; }
 .suite-plan p, .suite-plan li { color: var(--muted); line-height: 1.55; }
 .suite-plan-price { font-size: 2.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
