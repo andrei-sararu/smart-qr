@@ -6,3 +6,30 @@
 .workflow-phone,.workflow-board{min-width:0;background:#fff;border:1px solid #ccdae2;border-radius:16px;padding:clamp(10px,1.5vw,18px);box-shadow:0 8px 20px #15263715;overflow-wrap:anywhere}.workflow-phone{border:4px solid #152637;border-radius:23px}.workflow-phone span,.workflow-board span{display:block;font-weight:800;font-size:.85rem;margin-bottom:9px}
 .workflow-phone img{display:block;width:100%;height:clamp(65px,9vw,120px);object-fit:cover;border-radius:10px}.workflow-phone h3,.workflow-ticket h3{font-size:1rem;line-height:1.25;margin:10px 0 4px}.workflow-phone p,.workflow-ticket p{margin:4px 0;font-size:.9rem;color:#46596c}.workflow-ticket,.workflow-asset-label{border-left:4px solid #096659;background:#eaf4ef;padding:9px;border-radius:8px}.workflow-transcript{margin-top:18px}.workflow-transcript summary{cursor:pointer;font-weight:700}
 @media(max-width:850px){.workflow-scene{grid-template-columns:1fr}.workflow-photo{min-height:200px}.workflow-devices{align-items:start}.workflow-progress li{font-size:.76rem}}
+.workflow-devices{align-items:stretch;min-height:320px}
+.workflow-phone,.workflow-board{align-self:stretch;min-height:235px}
+.walk-device-label{border-bottom:1px solid #dce4eb;padding-bottom:8px}
+.walk-control{position:relative;display:block;background:#096659;color:white;text-align:center;border-radius:9px;padding:8px;margin-top:10px;font-weight:750;font-size:.86rem}
+.walk-tap::after{content:'';position:absolute;z-index:1;top:50%;left:60%;width:22px;height:22px;border:3px solid white;border-radius:50%;background:#f6bd57;box-shadow:0 0 0 6px #f6bd5755;opacity:0;animation:walk-tap 6.5s ease both}
+.walk-tap{animation:walk-press 6.5s ease both}
+.walk-viewfinder{position:relative;display:grid;place-items:center;background:#142535;color:white;border:3px dashed #67d1b2;border-radius:13px;min-height:88px;margin-top:12px}
+.walk-viewfinder i{position:absolute;left:9%;right:9%;height:2px;background:#67d1b2;animation:walk-scan 2s ease-in-out 2}
+.walk-viewfinder span{margin:0}
+.walk-ticket--arrival{background:#fff2d8;border-color:#b57516;animation:walk-arrive .65s 1.55s both}
+.walk-ticket--attention{background:#fff2d8;border-color:#b57516}
+.walk-ticket--quiet{background:#eef2f6;border-color:#8596a8}
+.walk-ticket--done,.walk-confirm,.walk-receipt{background:#e7f5ec;border-color:#09704f}
+.walk-confirm,.walk-receipt,.walk-field{margin-top:14px;padding:12px;border-radius:10px;border:1px solid #cbdde4}
+.walk-confirm>span{font-size:1.7rem;color:#096659}
+.walk-board-tabs,.walk-order-track{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.walk-board-tabs span,.walk-order-track span,.walk-order-track strong,.walk-badge{font-size:.72rem!important;background:#edf1f6;padding:4px 6px;border-radius:6px;margin:0!important}
+.walk-order-track strong{background:#cceadb;color:#0a513f}
+.walk-transfer{font-size:.8rem;font-weight:750;color:#0a513f;margin-bottom:9px;animation:walk-arrive .55s 1.3s both}
+.walk-transfer span{display:inline!important;font-size:inherit;margin:0}
+.workflow-demo[data-paused] *,.workflow-demo[data-paused] *::after{animation-play-state:paused!important}
+@keyframes walk-tap{0%,12%,40%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}20%{opacity:1;transform:translate(-50%,-50%) scale(1)}28%{opacity:1;transform:translate(-50%,-50%) scale(.7)}}
+@keyframes walk-press{0%,19%,34%,100%{transform:scale(1)}25%{transform:scale(.96)}}
+@keyframes walk-arrive{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes walk-scan{0%,100%{top:20%}50%{top:80%}}
+@media(max-width:440px){.workflow-devices{grid-template-columns:1fr;min-height:0}.workflow-phone,.workflow-board{min-height:0}.workflow-phone .walk-food{height:86px}}
+@media(prefers-reduced-motion:reduce){.workflow-demo *,.workflow-demo *::after{animation:none!important}}

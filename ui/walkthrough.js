@@ -12,10 +12,71 @@ const assetWalkthrough=[
   ['Submit the fault','The resident reports the fault. Cotiso saves the report with the asset reference and location.','Report received','The boiler displays an error.','New report · B1024','Riverside House · The boiler displays an error.'],
   ['The team resolves the issue','The owner moves the report to In progress and then marks it Resolved.','Report saved','The resident sees a submission confirmation.','Resolved · B1024','The report remains available in the workspace.']
 ];
+function walkthroughScreens(kind,index){
+  const dining=kind==='restaurant';
+  const [, ,guest,guestDetail,board,boardDetail]=(dining?restaurantWalkthrough:assetWalkthrough)[index];
+  const control=(label,tap=false)=>`<div class="walk-control ${tap?'walk-tap':''}">${label}</div>`;
+  const ticket=(tone='open',extra='')=>`<div class="workflow-ticket walk-ticket--${tone}"><h3>${board}</h3><p>${boardDetail}</p>${extra}</div>`;
+  const scan=(label)=>`<div class="walk-viewfinder walk-tap"><span>${label}</span><i></i></div>`;
+  const dish=`<img class="walk-food" src="${seed[1].image}" alt="Illustrative mushroom risotto">`;
+  let phone,staff,transfer='';
+  if(dining){
+    switch(index){
+      case 0:
+        phone=scan('Table 7 QR')+`<h3>Table 7 menu</h3>`+control('Open menu');
+        staff=`<div class="walk-board-tabs"><span>Requests</span><span>Orders</span><span>Bills</span></div>`+ticket('quiet');
+        break;
+      case 1:
+        phone=dish+`<h3>Mushroom risotto</h3><p>1 serving · Extra Parmesan</p>`+control('Send dish list',true);
+        staff=ticket('arrival','<span class="walk-badge">New request</span>');
+        transfer='Dish list sent to staff';
+        break;
+      case 2:
+        phone=`<div class="walk-confirm"><span>✓</span><h3>${guest}</h3><p>${guestDetail}</p></div>`;
+        staff=ticket('attention',control('Take request',true));
+        break;
+      case 3:
+        phone=dish+`<h3>${guest}</h3><p>${guestDetail}</p>`;
+        staff=`<div class="walk-order-track"><span>Confirmed</span><span>Preparing</span><strong>Served</strong></div>`+ticket('open',control('Mark served',true));
+        break;
+      case 4:
+        phone=`<h3>Table 7</h3><p>Your table order</p>`+control('Request bill',true)+`<p>${guestDetail}</p>`;
+        staff=ticket('arrival','<span class="walk-badge">Bill request</span>');
+        transfer='Bill request sent to staff';
+        break;
+      case 5:
+        phone=`<div class="walk-receipt"><h3>Table 7 bill</h3><p>Mushroom risotto</p><p>Extra Parmesan</p><strong>Paid at the till</strong></div>`;
+        staff=ticket('done',control('Close bill',true));
+        break;
+    }
+  }else{
+    switch(index){
+      case 0:
+        phone=scan('Equipment QR')+`<h3>${guest}</h3><p>${guestDetail}</p>`;
+        staff=ticket('quiet','<span class="walk-badge">Visit tracked</span>');
+        break;
+      case 1:
+        phone=`<h3>Boiler B1024</h3>`+control('View instructions')+control('Report an issue',true);
+        staff=ticket('open');
+        break;
+      case 2:
+        phone=`<h3>Report an issue</h3><div class="walk-field">The boiler displays an error.</div>`+control('Submit report',true);
+        staff=ticket('arrival','<span class="walk-badge">New</span>');
+        transfer='Report sent to maintenance';
+        break;
+      case 3:
+        phone=`<div class="walk-confirm"><span>✓</span><h3>${guest}</h3><p>${guestDetail}</p></div>`;
+        staff=`<div class="walk-order-track"><span>New</span><span>In progress</span><strong>Resolved</strong></div>`+ticket('done',control('Mark resolved',true));
+        break;
+    }
+  }
+  return `<div class="workflow-phone"><span class="walk-device-label">${dining?'Guest phone':'Resident phone'}</span>${phone}</div>
+    <div class="workflow-board"><span class="walk-device-label">${dining?'Waiter’s service board':'Maintenance workspace'}</span>
+    ${transfer?`<div class="walk-transfer"><span aria-hidden="true">→</span> ${transfer}</div>`:''}${staff}</div>`;
+}
 function workflowWalkthrough(kind){
   const restaurant=kind==='restaurant',steps=restaurant?restaurantWalkthrough:assetWalkthrough;
   const photo=restaurant?venues[lab.venue]?.photo||venues.restaurant.photo:'';
-  const dish=restaurant?seed[1].image:'';
   return `<main class="wrap workflow-demo" data-walkthrough="${kind}">
     <nav class="actions" aria-label="Demo journeys"><a class="btn ${restaurant?'primary':''}" href="/#demo" ${restaurant?'aria-current="page"':''}>Restaurant service</a><a class="btn ${restaurant?'':'primary'}" href="/#platform-demo" ${restaurant?'':'aria-current="page"'}>Asset reporting</a></nav>
     <p class="workflow-kicker">Automatic product walkthrough</p>
@@ -26,15 +87,7 @@ function workflowWalkthrough(kind){
       <div class="workflow-photo ${photo?'':'workflow-equipment'}" ${photo?`style="background-image:linear-gradient(0deg,#111b2fc9,#111b2f22),url('${photo}')"`:''}>
         <div><span data-walk-step>Step 1 of ${steps.length}</span><h2 data-walk-title>${steps[0][0]}</h2><p data-walk-copy>${steps[0][1]}</p></div>
       </div>
-      <div class="workflow-devices">
-        <div class="workflow-phone"><span>${restaurant?'Guest phone':'Resident phone'}</span>
-          ${dish?`<img src="${dish}" alt="Mushroom risotto, illustrated with a sample dish">`:'<div class="workflow-asset-label">Asset B1024</div>'}
-          <h3 data-walk-guest>${steps[0][2]}</h3><p data-walk-guest-detail>${steps[0][3]}</p>
-        </div>
-        <div class="workflow-board"><span>${restaurant?'Waiter’s service board':'Maintenance workspace'}</span>
-          <div class="workflow-ticket"><h3 data-walk-board>${steps[0][4]}</h3><p data-walk-board-detail>${steps[0][5]}</p></div>
-        </div>
-      </div>
+      <div class="workflow-devices" data-walk-devices>${walkthroughScreens(kind,0)}</div>
     </section>
     <div class="actions"><button type="button" class="btn" onclick="toggleWalkthrough(this)">Pause</button><button type="button" class="btn" onclick="replayWalkthrough(this)">Replay</button>
     <a class="btn" href="${restaurant?'/#help?topic=service':'/#platform-guide?topic=profiles'}">Open setup guide</a></div>
@@ -44,9 +97,10 @@ function workflowWalkthrough(kind){
 let activeWalkthrough;
 function updateWalkthrough(player,index){
   player.index=index;
-  const [title,copy,guest,guestDetail,board,boardDetail]=player.steps[index];
-  const values={step:'Step '+(index+1)+' of '+player.steps.length,title,copy,guest,'guest-detail':guestDetail,board,'board-detail':boardDetail};
+  const [title,copy]=player.steps[index];
+  const values={step:'Step '+(index+1)+' of '+player.steps.length,title,copy};
   for(const [key,value] of Object.entries(values))player.root.querySelector('[data-walk-'+key+']').textContent=value;
+  player.root.querySelector('[data-walk-devices]').innerHTML=walkthroughScreens(player.kind,index);
   player.root.querySelectorAll('.workflow-progress li').forEach((item,i)=>{
     if(i===index)item.setAttribute('aria-current','step');
     else item.removeAttribute('aria-current');
@@ -56,6 +110,7 @@ function startWalkthrough(player){
   clearTimeout(player.timer);
   player.paused=false;
   player.toggle.textContent='Pause';
+  player.root.removeAttribute('data-paused');
   player.timer=setTimeout(function advance(){
     if(!player.root.isConnected||player.paused)return;
     if(!document.hidden)updateWalkthrough(player,(player.index+1)%player.steps.length);
@@ -66,7 +121,7 @@ function toggleWalkthrough(button){
   const player=activeWalkthrough;
   if(!player||!player.root.contains(button))return;
   if(player.paused)startWalkthrough(player);
-  else{player.paused=true;clearTimeout(player.timer);button.textContent='Play'}
+  else{player.paused=true;clearTimeout(player.timer);player.root.setAttribute('data-paused','');button.textContent='Play'}
 }
 function replayWalkthrough(button){
   const player=activeWalkthrough;
@@ -84,7 +139,7 @@ render=function(){
     document.getElementById('root').innerHTML=header()+workflowWalkthrough(kind);
     document.title='Cotiso QR | '+(kind==='restaurant'?'Restaurant walkthrough':'Asset walkthrough');
     const scene=document.querySelector('[data-walkthrough]');
-    activeWalkthrough={root:scene,view,index:0,steps:kind==='restaurant'?restaurantWalkthrough:assetWalkthrough,toggle:scene.querySelector('button')};
+    activeWalkthrough={root:scene,view,kind,index:0,steps:kind==='restaurant'?restaurantWalkthrough:assetWalkthrough,toggle:scene.querySelector('button')};
     startWalkthrough(activeWalkthrough);
     return;
   }
