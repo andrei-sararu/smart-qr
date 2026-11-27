@@ -24,6 +24,7 @@ Use outbound integrations only through a queue with authenticated, bounded deliv
 ## Portfolio controls
 
 Codes can be grouped by a project name and tagged. These labels are scoped to the signed-in owner and searchable in the workspace. Cloning opens an editable copy with a new scan identity on save. Dynamic copies default to paused, and an expiry is never copied. The workspace exports code definitions in JSON, without reports or scan records.
+A version 1 JSON export can be brought back through Bulk import. Each validated batch creates new records atomically within the 25-code limit. Dynamic codes and profiles start paused with expiry cleared.
 
 Project, tag and UTC expiry settings are stored separately and committed with code changes and revision history. Existing records need no backfill. Server-side expiry applies to profile views, actions and form submissions, and to dynamic redirects. Removing expiry restores the same printed link when the code is active. Static links are fixed and independently scannable.
 

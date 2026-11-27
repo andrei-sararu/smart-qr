@@ -61,6 +61,7 @@ function platformWorkspace(){
       <label>Project<select name="project"><option value="">All projects</option>${projects.map(project=>`<option value="${esc(project)}" ${project===selectedProject?'selected':''}>${esc(project)}</option>`).join('')}</select></label>
       <button class="btn small">Apply filters</button>
       <button class="btn small" type="button" onclick="exportPlatformCodes()">Export codes</button>
+      <button class="btn small" type="button" onclick="openPlatformImport()">Bulk import</button>
     </form>${visible.length?visible.map(item=>`<article class="cotiso-code"><div><strong>${esc(item.title)}</strong><p class="fine">${esc(item.reference||item.location||'')} · ${{profile:'Smart profile',dynamic:'Dynamic link',static:'Static link'}[item.mode]} · ${item.mode==='static'?'Fixed destination':item.status==='active'&&item.expires&&item.expires<=Date.now()?'expired':esc(item.status)} · ${count('scan',item.id)} tracked visits</p><p class="fine">${esc([item.project,...item.tags,item.expires?'Expires '+new Date(item.expires).toISOString().slice(0,16).replace('T',' ')+' UTC':''].filter(Boolean).join(' · '))}</p></div><div class="actions"><a class="btn small" href="/api/platform/${item.id}/png">PNG</a><a class="btn small" href="/api/platform/${item.id}/svg">SVG</a>${item.mode==='static'?'':`<a class="btn small" href="/q/${item.id}" target="_blank" rel="noopener noreferrer">Open</a>`}<button class="btn small" onclick="platformEditor('${item.id}')">Edit</button><button class="btn small" onclick="platformEditor('${item.id}',true)">Clone</button><button class="btn small" onclick="platformHistory('${item.id}')">History</button></div></article>`).join(''):profiles.length?'<p>No codes match the selected filters.</p>':'<p>Create a static code, an editable destination, or a Smart QR profile with multiple actions.</p>'}</section>
     <section id="cotiso-inbox"><h2>Recent reports</h2>${reports.length?reports.map(report=>`<article class="cotiso-code"><div><strong>${esc(report.title)}</strong><p class="fine">${esc([report.reference,report.location,new Date(report.created).toLocaleString()].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${esc(report.message)}</p></div></article>`).join(''):'<p>Submitted reports will appear here.</p>'}</section></div>
   </div></main>`;
@@ -79,6 +80,40 @@ function exportPlatformCodes(){
   link.download='cotiso-qr-codes.json';
   link.click();
   setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+function openPlatformImport(){
+  modal(`<h2>Bulk import QR codes</h2>
+    <p>Choose a Cotiso QR JSON export. Every code will receive a new identity. Dynamic links and profiles start paused. Expiry dates, reports and scan history are excluded.</p>
+    <label>QR code export<input type="file" accept=".json,application/json" onchange="previewPlatformImport(this)"></label>
+    <div data-import-preview aria-live="polite"></div>`);
+}
+async function previewPlatformImport(input){
+  const preview=input.closest('.modal').querySelector('[data-import-preview]');
+  preview.replaceChildren();
+  const file=input.files[0];
+  if(!file)return;
+  try{
+    if(file.size>250000)throw Error('Choose a JSON export under 250 KB.');
+    let data;
+    try{data=JSON.parse(await file.text())}catch{throw Error('The file does not contain valid JSON.')}
+    if(!input.isConnected||input.files[0]!==file)return;
+    if(data?.version!==1||!Array.isArray(data.codes)||!data.codes.length||data.codes.length>25)throw Error('Choose a Cotiso QR version 1 export with 1–25 codes.');
+    if(platformData.profiles.length+data.codes.length>25)throw Error('This batch exceeds the workspace limit of 25 codes.');
+    preview.innerHTML=`<h3>Review ${data.codes.length} new codes</h3><ol>${data.codes.map(code=>`<li>${esc(code?.title||'Untitled')} · ${esc(code?.mode||'Unknown type')}</li>`).join('')}</ol><p role="alert"></p><button class="btn primary">Create new codes</button>`;
+    const button=preview.querySelector('button');
+    button.onclick=async()=>{
+      button.disabled=true;
+      input.disabled=true;
+      try{
+        const {ids}=await api('platform/import','POST',data);
+        closeModal();
+        selectedProject='';
+        platformSearch='';
+        await loadPlatform();
+        toast(ids.length+' QR codes created.');
+      }catch(error){preview.querySelector('[role=alert]').textContent=error.message;button.disabled=false;input.disabled=false}
+    };
+  }catch(error){if(input.isConnected&&input.files[0]===file)preview.textContent=error.message}
 }
 function platformEditor(id,clone=false){
   const source=platformData.profiles.find(profile=>profile.id===id);

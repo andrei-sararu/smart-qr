@@ -88,3 +88,25 @@ test('Project metadata and expiry are scoped, versioned and preserve the QR addr
   assert.equal((await call(admin,'PUT',{...expired,expires:null,revision:2})).status,200);
   assert.equal((await call(scan,'GET',undefined,null)).status,200);
 });
+
+test('Bulk import validates the entire batch, creates fresh paused codes and enforces capacity atomically',async()=>{
+  const {call}=fixture();
+  const send=codes=>call('/api/platform/import','POST',{version:1,codes});
+  const list=async()=>(await (await call('/api/platform')).json()).profiles;
+  const bad=await send([profile,{...profile,title:''}]);
+  assert.equal(bad.status,400);
+  assert.match((await bad.json()).error,/Code 2/);
+  assert.equal((await list()).length,0);
+  const created=await send([{...profile,id:'old',status:'active',report:1,project:'Maintenance',expires:1}]);
+  assert.equal(created.status,201);
+  const {ids}=await created.json();
+  const item=(await list())[0];
+  assert.equal(item.id,ids[0]);
+  assert.notEqual(item.id,'old');
+  assert.deepEqual([item.status,item.report,item.project,item.expires],['paused',1,'Maintenance',null]);
+  assert.equal((await call('/q/'+item.id,'GET',undefined,null)).status,404);
+  assert.equal((await send(Array.from({length:25},()=>profile))).status,409);
+  assert.equal((await list()).length,1);
+  assert.equal((await send(Array.from({length:24},()=>profile))).status,201);
+  assert.equal((await list()).length,25);
+});
