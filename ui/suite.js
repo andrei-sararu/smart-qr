@@ -375,3 +375,34 @@ header=function(){
   return suiteHeader().replace('<header>','<header class="suite-header">');
 };
 if(ready)render();
+
+
+const dashboardWithSingleLocation=dashboard;
+dashboard=function(){
+  const content=dashboardWithSingleLocation();
+  if(!session||!restaurant)return content;
+  const selected=locationChoices.find(item=>item.id===restaurant.id);
+  const options=locationChoices.map(item=>`<option value="${esc(item.id)}" ${item.id===restaurant.id?'selected':''}>${esc(item.name)}</option>`).join('');
+  return `<section class="wrap cotiso-location-switch" aria-label="Restaurant locations">
+    <label>Current restaurant or location<select onchange="switchRestaurantLocation(this.value)">${selected?options:`<option selected>${esc(restaurant.name)}</option>`}</select></label>
+    <button class="btn small" onclick="openRestaurantLocationForm()">Add restaurant or location</button>
+    <a class="btn small" href="/#platform">QR workspace</a>
+  </section>`+content;
+};
+function switchRestaurantLocation(id){
+  localStorage.setItem('cotiso-restaurant-location',id);
+  location.reload();
+}
+function openRestaurantLocationForm(){
+  modal('<h2>Add restaurant or location</h2><p class="muted">Use the venue and branch name, for example Greenhouse · Camberley. Your new location starts on Free with its own private menu.</p><form onsubmit="saveRestaurantLocation(event)"><label>Restaurant or location name<input name="name" required maxlength="80"></label><button class="btn primary">Create location</button><p role="alert"></p></form>');
+}
+async function saveRestaurantLocation(event){
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('button');
+  button.disabled=true;
+  try{
+    const result=await api('restaurant/location','POST',{name:new FormData(form).get('name')});
+    switchRestaurantLocation(result.restaurant.id);
+  }catch(error){form.querySelector('[role=alert]').textContent=error.message;button.disabled=false}
+}
+if(ready)render();

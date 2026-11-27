@@ -6,10 +6,15 @@ let billingCurrency=(navigator.language||'').toLowerCase()==='en-gb'?'gbp':'eur'
 let pollTimer,seenRequests=new Set(),soundOn=false,loadError='';
 const originalHome=home,originalMenu=menu,originalEdit=edit;
 state={items:[],calls:[],venue:'',currency:'EUR',plan:'Free'};
-async function api(path,method='GET',data){const response=await fetch('/api/'+path,{method,credentials:'same-origin',headers:data instanceof Blob?{'Content-Type':data.type}:data?{'Content-Type':'application/json'}:{},body:data instanceof Blob?data:data?JSON.stringify(data):undefined});let result;try{result=await response.json()}catch{throw Error('The server returned an unexpected response. Please reload.')}if(!response.ok){let error=Error(result.error||'Request failed.');error.status=response.status;throw error}return result}
+let locationChoices=[];
+let selectedLocation=read('cotiso-restaurant-location','');
+async function api(path,method='GET',data){const response=await fetch('/api/'+path,{method,credentials:'same-origin',headers:{...(data instanceof Blob?{'Content-Type':data.type}:data?{'Content-Type':'application/json'}:{}),...(selectedLocation?{'X-Cotiso-Location':selectedLocation}:{})},body:data instanceof Blob?data:data?JSON.stringify(data):undefined});let result;try{result=await response.json()}catch{throw Error('The server returned an unexpected response. Please reload.')}if(!response.ok){let error=Error(result.error||'Request failed.');error.status=response.status;throw error}return result}
 const signIn=()=>location.assign('/signin-with-chatgpt?return_to='+encodeURIComponent('/#dashboard'));
 function applyRestaurant(r){restaurant=r;state.venue=r.name;state.currency=r.currency;state.items=r.items;state.plan=r.plan}
-async function loadSession(){const s=await api('session');session=s.user;billingReady=s.billingReady;emailVerificationReady=s.emailVerificationReady;assistantReady=s.assistantReady;if(s.restaurant)applyRestaurant(s.restaurant);else restaurant=null;return s}
+async function loadSession(){let s=await api('session');
+if(selectedLocation&&s.user&&!s.restaurant){selectedLocation='';localStorage.removeItem('cotiso-restaurant-location');s=await api('session')}
+locationChoices=s.locations||[];
+session=s.user;billingReady=s.billingReady;emailVerificationReady=s.emailVerificationReady;assistantReady=s.assistantReady;if(s.restaurant)applyRestaurant(s.restaurant);else restaurant=null;return s}
 const overdueAlerted=new Set();
 const guestOrder=new Map();
 let guestCategory=null;

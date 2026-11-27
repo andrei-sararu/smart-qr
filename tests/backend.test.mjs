@@ -15,7 +15,7 @@ const dbAdapter=sql=>({
  async batch(statements){sql.exec('BEGIN');try{const r=[];for(const s of statements)r.push(await s.run());sql.exec('COMMIT');return r}catch(e){sql.exec('ROLLBACK');throw e}}
 });
 beforeEach(()=>{sql=new DatabaseSync(':memory:');for(const name of readdirSync(new URL('../drizzle/',import.meta.url)).filter(n=>n.endsWith('.sql')).sort())sql.exec(readFileSync(new URL('../drizzle/'+name,import.meta.url),'utf8'));env={DB:dbAdapter(sql)}});
-async function call(path,method='GET',body,user='owner-a',origin='https://tablemint.test'){const headers={};if(user){headers['oai-authenticated-user-id']=user;headers['oai-authenticated-user-email']=user+'@example.test'}if(method!=='GET')headers.origin=origin;if(body)headers['content-type']='application/json';const req=new Request('https://tablemint.test/api/'+path,{method,headers,...(body?{body:JSON.stringify(body)}:{})});const res=await handleAPI(req,env);return {status:res.status,data:await res.json()}}
+async function call(path,method='GET',body,user='owner-a',origin='https://tablemint.test',location){const headers={};if(location)headers['x-cotiso-location']=location;if(user){headers['oai-authenticated-user-id']=user;headers['oai-authenticated-user-email']=user+'@example.test'}if(method!=='GET')headers.origin=origin;if(body)headers['content-type']='application/json';const req=new Request('https://tablemint.test/api/'+path,{method,headers,...(body?{body:JSON.stringify(body)}:{})});const res=await handleAPI(req,env);return {status:res.status,data:await res.json()}}
 const product={id:'dish-1',name:'Soup',category:'Starters',price:7,desc:'Seasonal soup',allergens:'Celery',available:true,image:''};
 async function create(user='owner-a'){return (await call('restaurant','POST',{name:'Test Bistro'},user)).data.restaurant}
 async function publish(){const r=await create();const saved=await call('restaurant','PUT',{name:r.name,currency:r.currency,items:[product],published:true,revision:r.revision});const workspace=await call('workspace');return {r:saved.data.restaurant,t:workspace.data.tables[0]}}
@@ -210,4 +210,22 @@ test('Confirmed rounds accrue to the table until staff closes the served bill',a
   for(const orderId of orderIds)await call('orders/'+orderId,'PATCH',{status:'served'});
   assert.equal((await call('orders/settle','POST',{tableId:bill.tableId,orderIds})).status,200);
   assert.deepEqual((await call('orders')).data.bills,[]);
+});
+
+test('Owners can add and select isolated locations while staff and other accounts cannot select them as owners',async()=>{
+ const original=await create();
+ const result=await call('restaurant/location','POST',{name:'Example · Camberley'});
+ assert.equal(result.status,201);
+ const location=result.data.restaurant;
+ assert.equal(location.plan,'Free');
+ assert.notEqual(location.slug,original.slug);
+ const get=(path,user,id)=>call(path,'GET',null,user,'https://tablemint.test',id);
+ assert.deepEqual((await get('session','owner-a',location.id)).data.locations.map(row=>row.id),[original.id,location.id]);
+ assert.equal((await get('workspace','owner-a')).data.restaurant.id,original.id);
+ const branch=await get('workspace','owner-a',location.id);
+ assert.equal(branch.data.restaurant.id,location.id);
+ assert.equal(branch.data.tables.length,12);
+ assert.equal((await get('workspace','owner-b',location.id)).status,404);
+ assert.equal((await call('restaurant','PUT',{name:'Updated Camberley',currency:'GBP',items:[],published:false,revision:0},'owner-a','https://tablemint.test',location.id)).status,200);
+ assert.equal((await get('workspace','owner-a')).data.restaurant.name,original.name);
 });

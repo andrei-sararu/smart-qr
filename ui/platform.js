@@ -7,7 +7,7 @@ const useCases=[
   ['Property & housing','Building or unit sign','Property profile with repair and safety links','Report a repair','Repair reports per location'],
   ['Field service','Machine or service point','Service instructions and support links','Request service','Requests by service point'],
   ['Retail & packaging','Product packaging','Product information and warranty links','Open warranty registration','Registration link selections'],
-  ['Hospitality','Table card','Digital menu and table service','Request service','Service requests by table'],
+  ['Hospitality','Table card','Digital menu with variants and extras','Request service','Service requests by table'],
   ['Marketing','Printed campaign','Campaign landing page and interest form','Submit interest','Form submissions by campaign']
 ];
 home=function(){
@@ -33,7 +33,13 @@ function platformDemo(){
   return `<main class="wrap cotiso-workspace"><a class="breadcrumb" href="/#home">Home</a><h1>From boiler label to repair report</h1><p>Example asset · B1024 · Riverside House</p>
   <details class="card"><summary>View example instructions</summary><p>Check the equipment label and contact your maintenance team if the unit displays a fault.</p></details>
   <details class="card"><summary>Preview the issue form</summary><p>A visitor describes the issue. In a published profile, their report is saved to the owner’s inbox with the asset reference and location.</p><p>This example does not collect or send reports.</p></details>
-  <p><a class="btn primary" href="/#platform">Create a real profile</a></p></main>`;
+  <section class="card"><h2>Try an editable QR destination</h2><p>Change the destination, then simulate a scan. The example QR reference stays the same.</p>
+    <label>Example destination<select id="cotiso-demo-destination"><option>Equipment instructions</option><option>Weekend maintenance notice</option></select></label>
+    <button class="btn" type="button" onclick="document.getElementById('cotiso-demo-result').textContent='Example QR B1024 opens: '+document.getElementById('cotiso-demo-destination').value">Simulate scan</button>
+    <p id="cotiso-demo-result" role="status"></p>
+    <p class="fine">Live dynamic codes can switch destinations automatically on a UTC schedule. Codes can also be grouped, cloned and imported in bulk.</p>
+  </section>
+  <p><a class="btn primary" href="/#platform">Create a real profile</a> <a class="btn" href="/#demo">Try the restaurant demo</a></p></main>`;
 }
 async function loadPlatform(){
   if(!session||platformPending)return;
@@ -41,7 +47,7 @@ async function loadPlatform(){
   try{platformData=await api('platform');platformError=''}catch(error){platformError=error.message}
   finally{platformPending=false;if(view==='platform')render()}
 }
-const platformSections={overview:'Overview',codes:'QR codes',reports:'Reports',analytics:'Analytics',help:'Getting started',company:'Company & billing'};
+const platformSections={overview:'Overview',codes:'QR codes',reports:'Reports',analytics:'Analytics',help:'Getting started',restaurants:'Restaurants & locations',company:'Company & billing'};
 function platformSection(){
   const value=new URLSearchParams(location.hash.split('?')[1]).get('tab');
   return Object.hasOwn(platformSections,value)?value:'overview';
@@ -66,6 +72,7 @@ function platformWorkspace(){
     <nav aria-label="Workspace navigation">${Object.entries(platformSections).map(([key,label])=>`<a href="/#platform?tab=${key}" ${section===key?'aria-current="page"':''}>${label}</a>`).join('')}<button type="button" onclick="signOutLocal()">Sign out</button></nav>
     <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>${platformSections[section]}</h1></div>${['overview','codes','help'].includes(section)?'<button class="btn primary" onclick="platformEditor()">Create QR code</button>':''}</div>
     ${section==='overview'?`<section class="card"><h2>${profiles.length?'Your QR workspace':'Set up your first QR code'}</h2><p class="muted">${profiles.length?`You have ${profiles.length} of 25 codes in this workspace.`:'Start with an asset, location or link that you want people to open from a printed code.'}</p>${profiles.length?'':steps}<div class="actions"><a class="btn" href="/#platform?tab=codes">Manage QR codes</a><a class="btn" href="/#platform?tab=help">Read the setup guide</a></div></section>`:''}
+    ${section==='restaurants'?`<section class="card"><h2>Your hospitality locations</h2><p class="muted">Each location has its own menu, table QR codes, orders and subscription.</p><div class="actions"><a class="btn primary" href="/#dashboard?locations=1">Manage restaurants & locations</a></div></section>`:''}
     ${section==='company'?platformCompanyForm():''}
     ${section==='help'?`<section class="card"><h2>From setup to your first scan</h2>${steps}<h3>When should I use the optional settings?</h3><p><strong>Projects and tags</strong> help you find codes later. <strong>Expiry</strong> closes access at a UTC date and time. <strong>Scheduled destination</strong> temporarily changes where a dynamic code sends visitors. Codes imported in bulk start paused.</p></section>`:''}
     <section id="cotiso-analytics" ${section==='analytics'?'':'hidden'}><h2>Activity in the last 30 days</h2><button class="btn small" onclick="loadPlatform()">Refresh analytics</button><div class="cotiso-metrics">${[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']].map(([kind,label])=>`<div><strong>${count(kind)}</strong><span>${label}</span></div>`).join('')}</div><p class="fine">Tracked visits include opened links. Static codes have no visit tracking. Link selections measure clicks.</p>
@@ -289,3 +296,37 @@ route=async function(){
   }
 };
 if(ready)render();
+
+const existingHospitalityDemo=demo;
+demo=function(){
+  return existingHospitalityDemo()+`<section class="wrap cotiso-workspace"><h2>Try a table order with options</h2>
+    <p>Example restaurant · Table 7. This demo runs in your browser.</p>
+    <form class="card" onsubmit="previewHospitalityOrder(event)">
+      <label>Size<select name="size"><option value="4.50">Half pint · £4.50</option><option value="7.00">Pint · £7.00</option></select></label>
+      <label><input type="checkbox" name="extra"> Add a side of crisps · £1.50</label>
+      <p><strong>Allergen declaration</strong> · Cereals containing gluten</p>
+      <button class="btn primary">Send example dish list</button>
+      <p role="status"></p>
+      <div data-demo-order hidden><button class="btn" type="button" onclick="advanceHospitalityDemo(this)">Confirm order</button></div>
+    </form></section>`;
+};
+function previewHospitalityOrder(event){
+  event.preventDefault();
+  const form=event.currentTarget,values=new FormData(form),size=values.get('size');
+  const amount=Number(size)+(values.has('extra')?1.5:0);
+  const details=(size==='7.00'?'Pint':'Half pint')+(values.has('extra')?' + crisps':'')+' · £'+amount.toFixed(2);
+  form.dataset.order=details;
+  form.querySelector('[role=status]').textContent='Staff board · Table 7 · '+details+' · Waiting for confirmation.';
+  const next=form.querySelector('[data-demo-order] button');
+  next.parentElement.hidden=false;
+  next.textContent='Confirm order';
+  next.disabled=false;
+}
+function advanceHospitalityDemo(button){
+  const form=button.form,status=form.querySelector('[role=status]');
+  const next={'Confirm order':['Order confirmed','Start preparation'],'Start preparation':['Preparing','Mark served'],'Mark served':['Served · Added to the open table bill','Finished']}[button.textContent];
+  if(!next)return;
+  status.textContent='Table 7 · '+form.dataset.order+' · '+next[0];
+  button.textContent=next[1];
+  button.disabled=next[1]==='Finished';
+}

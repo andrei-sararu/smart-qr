@@ -138,3 +138,4 @@ body { font-family: "Manrope", system-ui, sans-serif; }
 .allergen-select-grid label { margin: 0; }
 .menu-product-options input[type=checkbox] { width: auto; margin: 0 5px 0 0; }
 .qr-menu-product-body > .btn { margin-top: 10px; }
+.cotiso-location-switch{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding-top:14px}.cotiso-location-switch label{margin:0;min-width:min(100%,250px)}.cotiso-location-switch select{margin-bottom:0}
