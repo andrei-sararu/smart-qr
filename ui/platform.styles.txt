@@ -21,3 +21,9 @@
 @media(max-width:590px){.cotiso-hero-grid,.cotiso-cases{grid-template-columns:1fr}.cotiso-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.cotiso-header .brand{font-size:17px}.cotiso-header .nav{gap:6px}.cotiso-header .nav a{font-size:12px}}
 .cotiso-footer{display:flex;flex-wrap:wrap;gap:24px;padding-block:30px;border-top:1px solid var(--line);font-weight:700}
 .cotiso-filters{display:flex;align-items:end;flex-wrap:wrap;gap:10px}.cotiso-filters label{margin:0}.cotiso-filters label:first-child{flex:1;min-width:min(100%,250px)}.cotiso-filters input,.cotiso-filters select{margin-bottom:0}.modal [hidden]{display:none!important}
+.cotiso-dashboard [hidden]{display:none!important}
+.cotiso-dashboard nav a[aria-current=page]{color:#fff;background:#096659;border-color:#096659}
+.cotiso-dashboard nav a:hover,.cotiso-dashboard nav button:hover{text-decoration:underline}
+.cotiso-steps{padding-left:1.3em;line-height:1.65}.cotiso-steps li+li{margin-top:10px}
+.cotiso-advanced{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:10px}
+.cotiso-advanced summary{cursor:pointer;font-weight:700}

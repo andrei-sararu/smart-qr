@@ -40,22 +40,35 @@ async function loadPlatform(){
   try{platformData=await api('platform');platformError=''}catch(error){platformError=error.message}
   finally{platformPending=false;if(view==='platform')render()}
 }
+const platformSections={overview:'Overview',codes:'QR codes',reports:'Reports',analytics:'Analytics',help:'Getting started'};
+function platformSection(){
+  const value=new URLSearchParams(location.hash.split('?')[1]).get('tab');
+  return Object.hasOwn(platformSections,value)?value:'overview';
+}
 function platformWorkspace(){
-  if(!session)return accountForm();
+  if(!session)return accountForm().replace('Sign in to Smart QR','Sign in to Cotiso QR').replace('Manage your restaurant and digital menus.','Create and manage QR codes, profiles and reports.');
   if(platformError)return `<main class="wrap cotiso-workspace"><h1>QR workspace</h1><p role="alert">${esc(platformError)}</p><button class="btn" onclick="loadPlatform()">Retry</button></main>`;
   if(!platformData)return '<main class="wrap cotiso-workspace"><h1>QR workspace</h1><p>Loading workspace…</p></main>';
   const {profiles,events,reports}=platformData;
+  const section=platformSection();
+  const steps=`<ol class="cotiso-steps">
+    <li><strong>Choose what the scan opens.</strong> Pick a Smart QR profile for instructions and issue reports, a dynamic link for an address you may change, or a static link for a fixed address.</li>
+    <li><strong>Save and test.</strong> For a profile or dynamic link, set the status to Active and use Open to check what a visitor sees.</li>
+    <li><strong>Print the code.</strong> Use PNG for everyday printing or SVG for print layouts. With an active profile and its issue form enabled, submissions appear in Reports.</li>
+  </ol>`;
   const projects=[...new Set(profiles.map(item=>item.project).filter(Boolean))].sort();
   const term=platformSearch.trim().toLowerCase();
   const visible=profiles.filter(item=>(!selectedProject||item.project===selectedProject)&&[item.title,item.reference,item.location,item.project,...item.tags].some(value=>value.toLowerCase().includes(term)));
   const count=(kind,id)=>events.filter(row=>row.kind===kind&&(!id||row.profile===id)).reduce((sum,row)=>sum+row.total,0);
   const scanDays=[...new Set(events.map(row=>row.day))].slice(-30);
   return `<main class="wrap cotiso-workspace"><div class="cotiso-dashboard">
-    <nav aria-label="Workspace navigation"><a href="#platform">Overview</a><button onclick="document.getElementById('cotiso-codes').scrollIntoView()">QR codes</button><button onclick="document.getElementById('cotiso-inbox').scrollIntoView()">Reports</button><button onclick="document.getElementById('cotiso-analytics').scrollIntoView()">Analytics</button><button onclick="signOutLocal()">Sign out</button></nav>
-    <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>Your QR experiences</h1></div><button class="btn primary" onclick="platformEditor()">Create QR code</button></div>
-    <section id="cotiso-analytics"><h2>Activity in the last 30 days</h2><div class="cotiso-metrics">${[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']].map(([kind,label])=>`<div><strong>${count(kind)}</strong><span>${label}</span></div>`).join('')}</div><p class="fine">Tracked visits include opened links. Static codes have no visit tracking. Link selections measure clicks.</p>
+    <nav aria-label="Workspace navigation">${Object.entries(platformSections).map(([key,label])=>`<a href="/#platform?tab=${key}" ${section===key?'aria-current="page"':''}>${label}</a>`).join('')}<button type="button" onclick="signOutLocal()">Sign out</button></nav>
+    <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>${platformSections[section]}</h1></div>${['overview','codes','help'].includes(section)?'<button class="btn primary" onclick="platformEditor()">Create QR code</button>':''}</div>
+    ${section==='overview'?`<section class="card"><h2>${profiles.length?'Your QR workspace':'Set up your first QR code'}</h2><p class="muted">${profiles.length?`You have ${profiles.length} of 25 codes in this workspace.`:'Start with an asset, location or link that you want people to open from a printed code.'}</p>${profiles.length?'':steps}<div class="actions"><a class="btn" href="/#platform?tab=codes">Manage QR codes</a><a class="btn" href="/#platform?tab=help">Read the setup guide</a></div></section>`:''}
+    ${section==='help'?`<section class="card"><h2>From setup to your first scan</h2>${steps}<h3>When should I use the optional settings?</h3><p><strong>Projects and tags</strong> help you find codes later. <strong>Expiry</strong> closes access at a UTC date and time. <strong>Scheduled destination</strong> temporarily changes where a dynamic code sends visitors. Codes imported in bulk start paused.</p></section>`:''}
+    <section id="cotiso-analytics" ${section==='analytics'?'':'hidden'}><h2>Activity in the last 30 days</h2><button class="btn small" onclick="loadPlatform()">Refresh analytics</button><div class="cotiso-metrics">${[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']].map(([kind,label])=>`<div><strong>${count(kind)}</strong><span>${label}</span></div>`).join('')}</div><p class="fine">Tracked visits include opened links. Static codes have no visit tracking. Link selections measure clicks.</p>
     ${scanDays.length?`<details><summary>Visits and outcomes by day</summary><table class="table"><thead><tr><th>Date (UTC)</th><th>Visits</th><th>Reports</th></tr></thead><tbody>${scanDays.map(day=>`<tr><td>${esc(day)}</td>${['scan','complete'].map(kind=>`<td>${events.filter(row=>row.day===day&&row.kind===kind).reduce((sum,row)=>sum+row.total,0)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`:''}</section>
-    <section id="cotiso-codes"><h2>QR codes and profiles</h2>
+    <section id="cotiso-codes" ${section==='codes'?'':'hidden'}><h2>QR codes and profiles</h2>
     <form class="cotiso-filters" onsubmit="applyPlatformFilters(event)">
       <label>Search<input name="search" type="search" maxlength="100" value="${esc(platformSearch)}" placeholder="Title, asset reference, location or tag"></label>
       <label>Project<select name="project"><option value="">All projects</option>${projects.map(project=>`<option value="${esc(project)}" ${project===selectedProject?'selected':''}>${esc(project)}</option>`).join('')}</select></label>
@@ -63,7 +76,7 @@ function platformWorkspace(){
       <button class="btn small" type="button" onclick="exportPlatformCodes()">Export codes</button>
       <button class="btn small" type="button" onclick="openPlatformImport()">Bulk import</button>
     </form>${visible.length?visible.map(item=>`<article class="cotiso-code"><div><strong>${esc(item.title)}</strong><p class="fine">${esc(item.reference||item.location||'')} · ${{profile:'Smart profile',dynamic:'Dynamic link',static:'Static link'}[item.mode]} · ${item.mode==='static'?'Fixed destination':item.status==='active'&&item.expires&&item.expires<=Date.now()?'expired':esc(item.status)} · ${count('scan',item.id)} tracked visits</p><p class="fine">${esc([item.project,...item.tags,item.expires?'Expires '+new Date(item.expires).toISOString().slice(0,16).replace('T',' ')+' UTC':''].filter(Boolean).join(' · '))}</p></div><div class="actions"><a class="btn small" href="/api/platform/${item.id}/png">PNG</a><a class="btn small" href="/api/platform/${item.id}/svg">SVG</a>${item.mode==='static'?'':`<a class="btn small" href="/q/${item.id}" target="_blank" rel="noopener noreferrer">Open</a>`}<button class="btn small" onclick="platformEditor('${item.id}')">Edit</button><button class="btn small" onclick="platformEditor('${item.id}',true)">Clone</button><button class="btn small" onclick="platformHistory('${item.id}')">History</button></div></article>`).join(''):profiles.length?'<p>No codes match the selected filters.</p>':'<p>Create a static code, an editable destination, or a Smart QR profile with multiple actions.</p>'}</section>
-    <section id="cotiso-inbox"><h2>Recent reports</h2>${reports.length?reports.map(report=>`<article class="cotiso-code"><div><strong>${esc(report.title)}</strong><p class="fine">${esc([report.reference,report.location,new Date(report.created).toLocaleString()].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${esc(report.message)}</p></div></article>`).join(''):'<p>Submitted reports will appear here.</p>'}</section></div>
+    <section id="cotiso-inbox" ${section==='reports'?'':'hidden'}><h2>Recent reports</h2><p class="muted">Reports submitted through active Smart QR profiles appear here with the asset reference and location.</p><button class="btn small" onclick="loadPlatform()">Refresh reports</button>${reports.length?reports.map(report=>`<article class="cotiso-code"><div><strong>${esc(report.title)}</strong><p class="fine">${esc([report.reference,report.location,new Date(report.created).toLocaleString()].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${esc(report.message)}</p></div></article>`).join(''):'<p>No reports yet. To test the flow, open an active Smart QR profile with the issue form enabled and submit a test report.</p>'}</section></div>
   </div></main>`;
 }
 function applyPlatformFilters(event){
@@ -143,24 +156,26 @@ function platformEditor(id,clone=false){
   modal(`<h2>${item?'Edit QR experience':'Create QR experience'}</h2>
     <form onsubmit="savePlatform(event)" data-id="${item?.id||''}" data-revision="${item?.revision||0}" data-mode="${item?.mode||''}">
       <label>Title<input name="title" required maxlength="100" value="${esc(values.title)}"></label>
-      <label>Project<input name="project" list="cotiso-projects" maxlength="80" value="${esc(values.project||'')}" placeholder="e.g. Riverside maintenance"></label>
-      <datalist id="cotiso-projects">${[...new Set(platformData.profiles.map(profile=>profile.project).filter(Boolean))].map(project=>`<option value="${esc(project)}"></option>`).join('')}</datalist>
-      <label>Tags (comma separated)<input name="tags" maxlength="359" value="${esc((values.tags||[]).join(', '))}"></label>
-      <label data-expiry>Expiry (UTC)<input name="expires" type="datetime-local" max="2099-12-31T23:59" value="${values.expires?new Date(values.expires).toISOString().slice(0,16):''}"></label>
       <label>Type<select name="mode" ${item?'disabled':''} onchange="platformEditorMode(this.form)">${[['profile','Smart QR profile'],['dynamic','Dynamic link'],['static','Static link']].map(([key,label])=>`<option value="${key}" ${values.mode===key?'selected':''}>${label}</option>`).join('')}</select></label>
+      <p data-hint class="fine"></p>
       <div data-profile-fields><label>Description<textarea name="description" maxlength="700">${esc(values.description)}</textarea></label>
       <label>Asset reference<input name="reference" maxlength="80" value="${esc(values.reference)}"></label>
       <label>Location<input name="location" maxlength="120" value="${esc(values.location)}"></label>
       <label><input type="checkbox" name="report" ${values.report?'checked':''}> Enable the issue report form</label></div>
       <label data-state>Status<select name="status">${['active','paused','archived'].map(key=>`<option ${values.status===key?'selected':''}>${key}</option>`).join('')}</select></label>
       <div data-destinations>${Array.from({length:6},(_,i)=>`<div><label data-action-label>Action ${i+1} label<input name="label" maxlength="60" value="${esc(values.actions[i]?.label||'')}"></label><label>HTTPS destination<input name="url" type="url" maxlength="1000" placeholder="https://example.com" value="${esc(values.actions[i]?.url||'')}" ${values.mode==='static'&&item?'readonly':''}></label></div>`).join('')}</div>
+      <details class="cotiso-advanced"><summary>Optional settings</summary>
+      <label>Project<input name="project" list="cotiso-projects" maxlength="80" value="${esc(values.project||'')}" placeholder="e.g. Riverside maintenance"></label>
+      <datalist id="cotiso-projects">${[...new Set(platformData.profiles.map(profile=>profile.project).filter(Boolean))].map(project=>`<option value="${esc(project)}"></option>`).join('')}</datalist>
+      <label>Tags (comma separated)<input name="tags" maxlength="359" value="${esc((values.tags||[]).join(', '))}"></label>
+      <label data-expiry>Expiry (UTC)<input name="expires" type="datetime-local" max="2099-12-31T23:59" value="${values.expires?new Date(values.expires).toISOString().slice(0,16):''}"></label>
       <fieldset data-schedule><legend>Scheduled destination</legend>
         <p class="fine">During this window the QR opens the temporary URL. Outside it, the QR opens the main URL. Enter times in UTC.</p>
         <label>Temporary HTTPS destination<input type="url" name="schedule-url" maxlength="1000" value="${esc(values.schedule?.url||'')}"></label>
         <label>Starts (UTC)<input type="datetime-local" name="schedule-start" value="${values.schedule?new Date(values.schedule.starts).toISOString().slice(0,16):''}"></label>
         <label>Ends (UTC)<input type="datetime-local" name="schedule-end" max="2099-12-31T23:59" value="${values.schedule?new Date(values.schedule.ends).toISOString().slice(0,16):''}"></label>
       </fieldset>
-      <p data-hint class="fine"></p><p role="alert"></p><button class="btn primary">Save experience</button>
+      </details><p role="alert"></p><button class="btn primary">Save experience</button>
     </form>`);
   platformEditorMode(document.querySelector('#overlay form'));
 }
@@ -172,7 +187,11 @@ function platformEditorMode(form){
   const schedule=form.querySelector('[data-schedule]');
   schedule.hidden=mode!=='dynamic';
   schedule.disabled=mode!=='dynamic';
-  form.querySelectorAll('[data-destinations] > div').forEach((row,index)=>{row.hidden=mode!=='profile'&&index>0});
+  form.querySelectorAll('[data-destinations] > div').forEach((row,index)=>{
+    row.hidden=mode!=='profile'&&index>0;
+    row.querySelectorAll('input').forEach(input=>{input.disabled=row.hidden});
+  });
+  form.querySelector('[data-destinations] input[name=url]').required=mode!=='profile';
   form.querySelectorAll('[data-action-label]').forEach(label=>{label.hidden=mode!=='profile'});
   form.querySelector('[data-hint]').textContent=mode==='static'?'Printed static codes open their destination directly. The destination cannot be edited or paused after printing.':mode==='dynamic'?'Edit this destination later without reprinting.':'Add up to six actions, turn on the issue form, or use both. Anyone with the QR can see active profile content.';
 }
@@ -189,10 +208,16 @@ async function savePlatform(event){
     const [url,start,end]=scheduleFields;
     const schedule=mode==='dynamic'&&scheduleFields.some(Boolean)?{url,starts:Date.parse(start+'Z'),ends:Date.parse(end+'Z')}:null;
     if(schedule&&(!url||!Number.isFinite(schedule.starts)||!Number.isFinite(schedule.ends)))throw Error('Enter the temporary URL, start and end together.');
-    await api('platform'+(id?'/'+id:''),id?'PUT':'POST',{title:data.get('title'),description:data.get('description'),reference:data.get('reference'),location:data.get('location'),mode,status:mode==='static'?'active':data.get('status'),actions,schedule,project:data.get('project'),tags:String(data.get('tags')||'').split(',').map(tag=>tag.trim()).filter(Boolean),expires:mode!=='static'&&data.get('expires')?Date.parse(data.get('expires')+'Z'):null,report:data.has('report'),revision:Number(form.dataset.revision)});
+    const saved=await api('platform'+(id?'/'+id:''),id?'PUT':'POST',{title:data.get('title'),description:data.get('description'),reference:data.get('reference'),location:data.get('location'),mode,status:mode==='static'?'active':data.get('status'),actions,schedule,project:data.get('project'),tags:String(data.get('tags')||'').split(',').map(tag=>tag.trim()).filter(Boolean),expires:mode!=='static'&&data.get('expires')?Date.parse(data.get('expires')+'Z'):null,report:data.has('report'),revision:Number(form.dataset.revision)});
     closeModal();
     await loadPlatform();
-    toast('QR experience saved.');
+    const active=data.get('status')==='active'&&(!data.get('expires')||Date.parse(data.get('expires')+'Z')>Date.now());
+    modal(`<h2>QR code saved</h2><p>${mode==='static'?'Download the image and test it with your phone camera.':active?'Open the public page to test it, then download the QR image for printing.':'Activate this code before sharing it. You can change its status in Edit.'}</p><div class="actions">
+      ${mode!=='static'&&active?`<a class="btn" href="/q/${saved.id}" target="_blank" rel="noopener noreferrer">Open and test</a>`:''}
+      <a class="btn primary" href="/api/platform/${saved.id}/png">Download PNG</a>
+      <a class="btn" href="/api/platform/${saved.id}/svg">Download SVG</a>
+      <a class="btn" href="/#platform?tab=codes" onclick="closeModal()">Go to QR codes</a>
+    </div>`);
   }catch(error){form.querySelector('[role=alert]').textContent=error.message}
   finally{button.disabled=false}
 }
