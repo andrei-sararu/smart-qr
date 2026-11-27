@@ -5,4 +5,5 @@ for(const s of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(s[1]
 new vm.Script(readFileSync(new URL('../ui/live.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/marketing.js',import.meta.url),'utf8'));
 new vm.Script(readFileSync(new URL('../ui/growth.js',import.meta.url),'utf8'));
+new vm.Script(readFileSync(new URL('../ui/suite.js',import.meta.url),'utf8'));
 console.log('Browser scripts parse successfully.');

@@ -119,3 +119,60 @@ test('menu assistance produces editable translations and extraction drafts witho
  assert.deepEqual(extraction.data.items,[{name:'Soup',category:'Starter',desc:'Vegetable soup',price:null}]);
  assert.equal((await call('workspace')).data.restaurant.items.length,0);
 });
+
+test('Service invitations are single use, scoped to the board and revocable',async()=>{
+  const {r,t}=await publish();
+  const other=await create('owner-b');
+  const invite=await call('team','POST',{label:'Front of house'});
+  assert.equal(invite.status,201);
+  assert.match(invite.data.token,/^[a-f0-9]{32}$/);
+  assert.equal((await call('team/join','POST',{token:invite.data.token},null)).status,401);
+  assert.equal((await call('team/join','POST',{token:invite.data.token},'staff-a')).status,200);
+  assert.equal((await call('team/join','POST',{token:invite.data.token},'staff-b')).status,404);
+  const c=await call('request','POST',{token:t.token,type:'OrderReady',items:[{id:product.id,quantity:2}]},null);
+  const board=await call('team/board/'+r.id,'GET',null,'staff-a');
+  assert.equal(board.status,200);
+  assert.equal(board.data.requests[0].items[0].quantity,2);
+  assert.equal(board.data.tables,undefined);
+  assert.equal((await call('workspace','GET',null,'staff-a')).status,404);
+  assert.equal((await call('team/board/'+other.id,'GET',null,'staff-a')).status,404);
+  assert.equal((await call('request/'+c.data.request.id,'PATCH',{status:'taken',restaurantId:r.id},'staff-a')).status,200);
+  const member=(await call('team')).data.members[0];
+  await call('team/'+member.id,'DELETE');
+  assert.equal((await call('team/board/'+r.id,'GET',null,'staff-a')).status,404);
+  assert.equal((await call('request/'+c.data.request.id,'PATCH',{status:'done',restaurantId:r.id},'staff-a')).status,404);
+  sql.exec('UPDATE restaurants SET trial_end=0');
+  assert.equal((await call('team','POST',{label:'New staff'})).status,403);
+});
+
+test('Guest assistant returns only available menu IDs and respects plan and publication',async()=>{
+  const {r}=await publish();
+  env.AI={run:async()=>({response:'["dish-1","missing","dish-1"]'})};
+  const request={question:'Warm starter',language:'en'};
+  assert.deepEqual((await call('guest-assistant/'+r.slug,'POST',request,null)).data,{ids:['dish-1']});
+  sql.exec('UPDATE restaurants SET trial_end=0');
+  assert.equal((await call('guest-assistant/'+r.slug,'POST',request,null)).status,404);
+  sql.exec('UPDATE restaurants SET published=0');
+  assert.equal((await call('guest-assistant/'+r.slug,'POST',request,null)).status,404);
+});
+
+test('A claimed dish list becomes one order and advances through preparation and service',async()=>{
+  const {r,t}=await publish();
+  const c=await call('request','POST',{token:t.token,type:'OrderReady',items:[{id:product.id,quantity:2}]},null);
+  const requestId=c.data.request.id;
+  assert.equal((await call('orders/confirm','POST',{requestId})).status,409);
+  await call('request/'+requestId,'PATCH',{status:'taken'});
+  assert.equal((await call('orders/confirm','POST',{requestId})).status,201);
+  assert.equal((await call('orders/confirm','POST',{requestId})).status,409);
+  let snapshot=(await call('workspace')).data;
+  assert.equal(snapshot.requests[0].status,'done');
+  assert.deepEqual(snapshot.orders[0].items,[{name:'Soup',quantity:2}]);
+  assert.equal((await call('orders/'+requestId,'PATCH',{status:'served'})).status,409);
+  assert.equal((await call('orders/'+requestId,'PATCH',{status:'preparing',restaurantId:r.id},'outsider')).status,404);
+  const invite=await call('team','POST',{label:'Kitchen'});
+  await call('team/join','POST',{token:invite.data.token},'staff-a');
+  assert.equal((await call('orders/'+requestId,'PATCH',{status:'preparing',restaurantId:r.id},'staff-a')).status,200);
+  assert.equal((await call('orders/'+requestId,'PATCH',{status:'served'})).status,200);
+  snapshot=(await call('workspace')).data;
+  assert.equal(snapshot.orders[0].status,'served');
+});

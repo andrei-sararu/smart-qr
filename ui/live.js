@@ -1,13 +1,14 @@
 let invoiceList=null,invoiceError='',invoiceLoading=false;
 // Server-backed application. Browser storage is used only for local preferences.
-let session=null,restaurant=null,tables=[],guest=null,guestCalls=[],billingReady=false,ready=false,busy=false,boardError='',lastPoll=0,publicLanguage='en';
+let session=null,restaurant=null,tables=[],guest=null,guestCalls=[],billingReady=false,assistantReady=false,ready=false,busy=false,boardError='',lastPoll=0,publicLanguage='en';
+let ownerOrders=[];
 let pollTimer,seenRequests=new Set(),soundOn=false,loadError='';
 const originalHome=home,originalMenu=menu,originalEdit=edit;
 state={items:[],calls:[],venue:'',currency:'EUR',plan:'Free'};
 async function api(path,method='GET',data){const response=await fetch('/api/'+path,{method,credentials:'same-origin',headers:data instanceof Blob?{'Content-Type':data.type}:data?{'Content-Type':'application/json'}:{},body:data instanceof Blob?data:data?JSON.stringify(data):undefined});let result;try{result=await response.json()}catch{throw Error('The server returned an unexpected response. Please reload.')}if(!response.ok){let error=Error(result.error||'Request failed.');error.status=response.status;throw error}return result}
 const signIn=()=>location.assign('/signin-with-chatgpt?return_to='+encodeURIComponent('/#dashboard'));
 function applyRestaurant(r){restaurant=r;state.venue=r.name;state.currency=r.currency;state.items=r.items;state.plan=r.plan}
-async function loadSession(){const s=await api('session');session=s.user;billingReady=s.billingReady;if(s.restaurant)applyRestaurant(s.restaurant);else restaurant=null;return s}
+async function loadSession(){const s=await api('session');session=s.user;billingReady=s.billingReady;assistantReady=s.assistantReady;if(s.restaurant)applyRestaurant(s.restaurant);else restaurant=null;return s}
 const overdueAlerted=new Set();
 const guestOrder=new Map();
 let guestCategory=null;
@@ -30,12 +31,13 @@ const orderLabels={
  el:['Έτοιμοι να παραγγείλουμε','Στείλτε τη λίστα και επιβεβαιώστε την παραγγελία στο τραπέζι.','Δεν επιλέχθηκαν πιάτα','Η λίστα στάλθηκε','Προσθήκη','Αφαίρεση']
 };
 const isOverdue=c=>c.status==='new'&&Date.now()-c.at>=180000;
-async function workspace(refresh=true){const data=await api('workspace');applyRestaurant(data.restaurant);tables=data.tables;state.calls=data.requests.map(c=>({...c,table:c.tableNumber,tableLabel:data.tables.find(t=>t.number===c.tableNumber)?.label}));const newCalls=state.calls.filter(c=>c.status==='new'&&!seenRequests.has(c.id));const overdue=state.calls.filter(c=>isOverdue(c)&&!overdueAlerted.has(c.id));
+async function workspace(refresh=true){const data=await api('workspace');applyRestaurant(data.restaurant);ownerOrders=data.orders||[];tables=data.tables;state.calls=data.requests.map(c=>({...c,table:c.tableNumber,tableLabel:data.tables.find(t=>t.number===c.tableNumber)?.label}));const newCalls=state.calls.filter(c=>c.status==='new'&&!seenRequests.has(c.id));const overdue=state.calls.filter(c=>isOverdue(c)&&!overdueAlerted.has(c.id));
+if(view==='dashboard'&&tab==='service'&&typeof notifyServiceRequests==='function'&&typeof notificationsEnabled!=='undefined')notifyServiceRequests(state.calls);
 if(lastPoll&&soundOn&&(newCalls.length||overdue.length))beep();
-overdue.forEach(c=>overdueAlerted.add(c.id));state.calls.forEach(c=>seenRequests.add(c.id));lastPoll=Date.now();boardError='';if(refresh&&view==='dashboard')render()}
+overdue.forEach(c=>overdueAlerted.add(c.id));state.calls.forEach(c=>seenRequests.add(c.id));lastPoll=Date.now();boardError='';if(refresh&&view==='dashboard'&&!document.hidden)render()}
 async function loadGuest(){const q=new URLSearchParams(location.search),slug=q.get('r'),token=q.get('t');if(!slug)throw Error('No restaurant was selected. Open a menu link or try the example menu.');const data=await api('public/'+encodeURIComponent(slug)+(token?'?table='+encodeURIComponent(token):''));const first=!guest;guest=data.restaurant;guestCalls=data.requests;const available=new Set(guest.items.map(item=>item.id));for(const id of guestOrder.keys())if(!available.has(id))guestOrder.delete(id);if(first){guestCategory=null;const preferred=read('smart-qr-menu-language:'+guest.slug,null)||navigator.language?.split('-')[0];publicLanguage=Object.hasOwn(LOCALES,preferred)?preferred:(guest.originalLanguage||'en');}return data}
 route=async function(){clearInterval(pollTimer);view=location.hash.slice(1).split('?')[0]||'home';loadError='';if(!ready)return;render();try{if(view==='dashboard'&&session&&restaurant){await workspace();startPoll()}else if(view==='menu'){guest=null;render();await loadGuest();render();api('view/'+encodeURIComponent(guest.slug),'POST',{}).catch(()=>{});startPoll()}}catch(e){loadError=e.message;render()}};
-function startPoll(){clearInterval(pollTimer);pollTimer=setInterval(async()=>{if(document.hidden||busy)return;try{if(view==='dashboard'&&restaurant&&['service','overview'].includes(tab)&&!document.querySelector('.modal-bg')){await workspace()}else if(view==='menu'&&guest){await loadGuest();render()} }catch(e){boardError=e.message;if(view==='dashboard'&&tab==='service')render()}},4000)}
+function startPoll(){clearInterval(pollTimer);pollTimer=setInterval(async()=>{if(busy||(document.hidden&&!(view==='dashboard'&&tab==='service'&&typeof notificationsEnabled!=='undefined'&&notificationsEnabled)))return;try{if(view==='dashboard'&&restaurant&&['service','overview'].includes(tab)&&!document.querySelector('.modal-bg')){await workspace()}else if(view==='menu'&&guest){await loadGuest();render()} }catch(e){boardError=e.message;if(view==='dashboard'&&tab==='service')render()}},4000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ready){if(view==='dashboard'&&restaurant)workspace().catch(e=>toast(e.message));if(view==='menu'&&guest)loadGuest().then(render).catch(e=>toast(e.message))}});
 go=function(v){if(location.hash==='#'+v)route();else location.hash=v};
 function openGuest(t){if(!restaurant)return;const url=new URL('/',location.origin);url.searchParams.set('r',restaurant.slug);if(t)url.searchParams.set('t',t);url.hash='menu';location.assign(url.href)}

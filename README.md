@@ -50,3 +50,10 @@ The public presentation includes a local interactive phone/tablet simulation, il
 The conversion presentation adds a local automated product guide (rules, not an LLM or live agent), sourced external competitor case studies with clear ordering/payment scope differences, and a user-assumption sales scenario calculator. No Smart QR revenue uplift is claimed. Service pulse is owner-scoped and reports request volume, UTC hourly counts and median first-pickup time; legacy records without taken_at are excluded. Menu health checks information completeness, not allergen accuracy or legal compliance. Open requests are prioritised oldest first.
 
 Styles embedded in the HTML route use .styles.txt?raw imports. Importing .css?raw into a Vinext route handler incorrectly adds an RSC wrapper around GET; preserve the text imports.
+
+### Account verification
+
+To require email verification for new sign-ups, set the Worker secret `RESEND_API_KEY`
+and set `SMART_QR_FROM_EMAIL` to a sender on a verified Resend domain. Existing
+accounts can continue signing in. New accounts receive a one-time link valid for
+one hour. If the link expires, signing in again sends a replacement.
