@@ -41,3 +41,101 @@
 .scene-phone{display:grid;grid-template-rows:auto minmax(0,1fr)}
 .language-preview-phone{display:grid;grid-template-rows:auto auto minmax(0,1fr)}
 .scene-content,.language-preview-body{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+
+.qr-menu {
+  --menu-accent: #9a3c24;
+  --menu-paper: #faf7f1;
+  --menu-card: #fffdf9;
+  --menu-text: #27231d;
+  --menu-muted: #65594c;
+  --menu-border: #e6dbcc;
+  --menu-cover: #272720;
+  --menu-cover-text: #fff9ee;
+  --menu-heading-font: Georgia, serif;
+  max-width: 880px;
+  margin: clamp(12px, 4vw, 36px) auto 64px;
+  background: var(--menu-paper);
+  color: var(--menu-text);
+  border-color: var(--menu-border);
+}
+.qr-menu.public-theme-editorial {
+  --menu-accent: #e1bb79;
+  --menu-paper: #14251d;
+  --menu-card: #1d3026;
+  --menu-text: #fff5e1;
+  --menu-muted: #ddd0b5;
+  --menu-border: #776648;
+  --menu-cover: #101d17;
+}
+.qr-menu.public-theme-coffee {
+  --menu-accent: #944825;
+  --menu-paper: #fff5e8;
+  --menu-text: #40271c;
+  --menu-cover: #e9b27c;
+  --menu-cover-text: #40271c;
+}
+.qr-menu.public-theme-hotel {
+  --menu-accent: #47613d;
+  --menu-paper: #faf8f1;
+  --menu-text: #303e2d;
+  --menu-cover: #394a36;
+}
+.qr-menu-cover {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: clamp(30px, 7vw, 68px) 20px;
+  background: var(--menu-cover);
+  color: var(--menu-cover-text);
+  text-align: center;
+  border-bottom: 4px solid var(--menu-accent);
+}
+.qr-menu-cover span {font-size: .875rem; letter-spacing: .13em; text-transform: uppercase;}
+.qr-menu-cover h2 {font: 400 clamp(2rem, 6vw, 4rem)/1.08 var(--menu-heading-font); margin: 0; overflow-wrap: anywhere;}
+.qr-menu-content {padding: clamp(14px, 4vw, 36px);}
+.qr-menu-tools {display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap;}
+.qr-menu-tools label {margin: 0; color: var(--menu-muted); font-size: .875rem;}
+.qr-menu-tools select {margin-bottom: 0; background-color: var(--menu-card); color: var(--menu-text); border-color: var(--menu-border);}
+.qr-menu-tools .servicebar {margin: 0;}
+.qr-menu-note, .qr-menu-credit {font-size: .875rem; color: var(--menu-muted); line-height: 1.5;}
+.qr-menu-credit {margin: 26px 0 0; text-align: center;}
+.qr-menu .qr-menu-categories {margin: 16px 0 0; padding: 4px 2px 8px;}
+.qr-menu .qr-menu-categories button {background: var(--menu-card); color: var(--menu-text); border-color: var(--menu-border);}
+.qr-menu .qr-menu-categories button.active {background: var(--menu-text); border-color: var(--menu-text); color: var(--menu-paper);}
+.qr-menu-group {margin-top: 26px;}
+.qr-menu-group > h3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font: 400 clamp(1.45rem, 4vw, 2rem)/1.2 var(--menu-heading-font);
+  overflow-wrap: anywhere;
+}
+.qr-menu-group > h3::after {content: ""; flex: 1; min-width: 16px; border-top: 1px solid var(--menu-border);}
+.qr-menu-grid {display: grid; gap: 12px;}
+.qr-menu-product {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--menu-border);
+  border-radius: 16px;
+  background: var(--menu-card);
+}
+.qr-menu-photo {width: clamp(64px, 18vw, 104px); aspect-ratio: 1; object-fit: cover; border-radius: 10px;}
+.qr-menu-photo[hidden] {display: none;}
+.qr-menu-product-body {flex: 1; min-width: 0; overflow-wrap: anywhere;}
+.qr-menu-product-title {display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 10px; row-gap: 4px;}
+.qr-menu-product h4 {flex: 1 1 8rem; min-width: 0; margin: 0; font: 700 1.125rem/1.25 var(--menu-heading-font);}
+.qr-menu-price {white-space: nowrap; font-size: 1rem; font-variant-numeric: tabular-nums;}
+.qr-menu-product p {margin: 7px 0 0; color: var(--menu-muted); line-height: 1.5;}
+.qr-menu-product .qr-menu-allergens {font-size: .875rem;}
+.qr-menu-product .actions {margin: 10px 0 0;}
+.qr-menu-product .actions button {min-width: 40px; min-height: 40px;}
+.menu-preview-modal {width: min(940px, 100%); padding: clamp(12px, 3vw, 28px);}
+.menu-preview-modal .qr-menu {margin: 16px auto 0;}
+@container qr-menu (min-width: 640px) {
+  .qr-menu-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+.qr-menu {container: qr-menu / inline-size;}

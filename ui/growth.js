@@ -72,8 +72,6 @@ if(ready)render();
 const appearanceSettings=settingsHtml;
 settingsHtml=function(){return appearanceSettings()+`<section class="card" style="margin-top:20px"><h3>Menu design</h3><p class="muted">Choose the appearance of your public QR menu. Changes apply to the published menu immediately.</p><div class="theme-picker">${[['classic','Classic','Clean and simple'],['editorial','Fine dining','Dark green and gold'],['coffee','Modern café','Warm tones and product cards'],['hotel','Boutique hotel','Elegant and understated']].map(([key,name,desc])=>`<button class="theme-option theme-${key}" onclick="saveAppearance('${key}')"><b>${name}</b><small>${desc}</small></button>`).join('')}</div><p id="appearance-status" role="status" class="fine"></p></section>`};
 async function saveAppearance(theme){const status=document.getElementById('appearance-status');if(status)status.textContent='Saving…';try{await api('appearance','PUT',{theme});if(status)status.textContent='Saved: '+theme+'. Your public menu has been updated.';toast('Menu design saved')}catch(e){if(status)status.textContent=e.message;toast(e.message)}}
-const appearanceLiveMenu=liveMenu;
-liveMenu=function(){const theme=['editorial','coffee','hotel'].includes(guest.theme)?guest.theme:'classic';return appearanceLiveMenu().replace('class="customer"','class="customer public-theme-'+theme+'"')};
 if(ready)render();
 
 const clearHome=home;
@@ -99,8 +97,6 @@ settingsHtml=function(){if(brandOwner!==restaurant.id){brandOwner=restaurant.id;
 function brandControls(){const p=brandPrefs;return `<form onsubmit="saveBrand(event)"><label>Accent colour <input name="accent" type="color" value="${/^#[0-9a-f]{6}$/i.test(p.accent)?p.accent:'#e60000'}"></label><label><input type="checkbox" name="defaultAccent" ${p.accent?'':'checked'}> Use theme's default colour</label><label>Typography<select name="font">${[['default','Theme default'],['sans','Modern sans-serif'],['serif','Classic serif']].map(([v,n])=>`<option value="${v}" ${p.font===v?'selected':''}>${n}</option>`).join('')}</select></label><button class="btn primary">Save branding</button><p id="brand-status" role="status"></p></form>`};
 saveAppearance=async function(theme){const el=document.getElementById('appearance-status');try{const p=await api('appearance');brandPrefs=await api('appearance','PUT',{...p,theme});if(el)el.textContent='Saved: '+theme;toast('Menu design saved')}catch(e){if(el)el.textContent=e.message}};
 async function saveBrand(e){e.preventDefault();const form=e.target,button=form.querySelector('button');button.disabled=true;try{const d=new FormData(form),p=await api('appearance');brandPrefs=await api('appearance','PUT',{theme:p.theme,accent:d.has('defaultAccent')?'':d.get('accent'),font:d.get('font')});document.getElementById('brand-status').textContent='Branding saved.';toast('Branding saved')}catch(err){document.getElementById('brand-status').textContent=err.message}finally{button.disabled=false}}
-const brandedMenu=liveMenu;
-liveMenu=function(){const accent=/^#[0-9a-f]{6}$/i.test(guest.accent||'')?guest.accent:'';const font=guest.font==='serif'?'Georgia,serif':guest.font==='sans'?'Arial,sans-serif':'';return brandedMenu().replace(/class="customer public-theme-([^"]+)"/,(_,theme)=>`class="customer public-theme-${theme}${accent?' custom-accent':''}" style="${accent?'--menu-accent:'+accent+';':''}${font?'font-family:'+font+';':''}"`)};
 if(ready)render();
 
 let previewLanguage='en';

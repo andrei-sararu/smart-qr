@@ -10,6 +10,7 @@ function applyRestaurant(r){restaurant=r;state.venue=r.name;state.currency=r.cur
 async function loadSession(){const s=await api('session');session=s.user;billingReady=s.billingReady;if(s.restaurant)applyRestaurant(s.restaurant);else restaurant=null;return s}
 const overdueAlerted=new Set();
 const guestOrder=new Map();
+let guestCategory=null;
 const orderLabels={
  en:['Ready to order','Send your list to the waiter. Confirm your order at the table.','No dishes selected','Order list sent','Add','Remove'],
  ro:['Sunt gata să comand','Trimite lista ospătarului. Confirmă comanda la masă.','Niciun preparat selectat','Lista a fost trimisă','Adaugă','Elimină'],
@@ -32,7 +33,7 @@ const isOverdue=c=>c.status==='new'&&Date.now()-c.at>=180000;
 async function workspace(refresh=true){const data=await api('workspace');applyRestaurant(data.restaurant);tables=data.tables;state.calls=data.requests.map(c=>({...c,table:c.tableNumber,tableLabel:data.tables.find(t=>t.number===c.tableNumber)?.label}));const newCalls=state.calls.filter(c=>c.status==='new'&&!seenRequests.has(c.id));const overdue=state.calls.filter(c=>isOverdue(c)&&!overdueAlerted.has(c.id));
 if(lastPoll&&soundOn&&(newCalls.length||overdue.length))beep();
 overdue.forEach(c=>overdueAlerted.add(c.id));state.calls.forEach(c=>seenRequests.add(c.id));lastPoll=Date.now();boardError='';if(refresh&&view==='dashboard')render()}
-async function loadGuest(){const q=new URLSearchParams(location.search),slug=q.get('r'),token=q.get('t');if(!slug)throw Error('No restaurant was selected. Open a menu link or try the example menu.');const data=await api('public/'+encodeURIComponent(slug)+(token?'?table='+encodeURIComponent(token):''));const first=!guest;guest=data.restaurant;guestCalls=data.requests;const available=new Set(guest.items.map(item=>item.id));for(const id of guestOrder.keys())if(!available.has(id))guestOrder.delete(id);if(first){const preferred=read('smart-qr-menu-language:'+guest.slug,null)||navigator.language?.split('-')[0];publicLanguage=Object.hasOwn(LOCALES,preferred)?preferred:(guest.originalLanguage||'en');}return data}
+async function loadGuest(){const q=new URLSearchParams(location.search),slug=q.get('r'),token=q.get('t');if(!slug)throw Error('No restaurant was selected. Open a menu link or try the example menu.');const data=await api('public/'+encodeURIComponent(slug)+(token?'?table='+encodeURIComponent(token):''));const first=!guest;guest=data.restaurant;guestCalls=data.requests;const available=new Set(guest.items.map(item=>item.id));for(const id of guestOrder.keys())if(!available.has(id))guestOrder.delete(id);if(first){guestCategory=null;const preferred=read('smart-qr-menu-language:'+guest.slug,null)||navigator.language?.split('-')[0];publicLanguage=Object.hasOwn(LOCALES,preferred)?preferred:(guest.originalLanguage||'en');}return data}
 route=async function(){clearInterval(pollTimer);view=location.hash.slice(1).split('?')[0]||'home';loadError='';if(!ready)return;render();try{if(view==='dashboard'&&session&&restaurant){await workspace();startPoll()}else if(view==='menu'){guest=null;render();await loadGuest();render();api('view/'+encodeURIComponent(guest.slug),'POST',{}).catch(()=>{});startPoll()}}catch(e){loadError=e.message;render()}};
 function startPoll(){clearInterval(pollTimer);pollTimer=setInterval(async()=>{if(document.hidden||busy)return;try{if(view==='dashboard'&&restaurant&&['service','overview'].includes(tab)&&!document.querySelector('.modal-bg')){await workspace()}else if(view==='menu'&&guest){await loadGuest();render()} }catch(e){boardError=e.message;if(view==='dashboard'&&tab==='service')render()}},4000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ready){if(view==='dashboard'&&restaurant)workspace().catch(e=>toast(e.message));if(view==='menu'&&guest)loadGuest().then(render).catch(e=>toast(e.message))}});
@@ -97,7 +98,18 @@ async function saveWithMessage(changes,message){try{await persist(changes);rende
 async function publishMenu(){if(!restaurant.published&&!state.items.length)return toast('Add at least one product before publishing.');if(!restaurant.published){modal(`<h2>Publish your menu?</h2><p class="muted">Confirm that prices, ingredients and allergens are correct. Publishing enables your menu link. The site's overall sharing settings still control who can open it.</p><button class="btn primary" onclick="confirmPublish()">Publish menu</button>`)}else modal('<h2>Take your menu offline?</h2><p class="muted">Guest menu links and new table requests will stop working until you publish again.</p><button class="btn primary" onclick="confirmUnpublish()">Unpublish menu</button>')}
 async function confirmPublish(){if(await saveWithMessage({published:true},'Menu published. Your QR code is ready.')){closeModal();showMenuCodes()}}
 async function confirmUnpublish(){if(await saveWithMessage({published:false},'Menu unpublished.'))closeModal()}
-function previewGuest(){if(restaurant.published)return openGuest();modal('<h2>Draft preview</h2><p class="muted">Your draft has not been published. Check your products below; guest requests are disabled.</p>'+state.items.map(d=>`<div class="mini-dish"><div><b>${esc(d.name)} · ${money(d.price)}</b><p class="muted">${esc(d.desc)}</p><p class="fine">Allergens: ${esc(d.allergens||'Not supplied')}</p></div></div>`).join(''))}
+async function previewGuest(){
+  if(restaurant.published)return openGuest();
+  const draft=restaurant;
+  modal('<h2>Draft preview</h2><p class="muted">Loading your menu…</p>');
+  const panel=document.querySelector('#overlay .modal');
+  let appearance={};
+  try{appearance=await api('appearance')}catch{}
+  if(!panel?.isConnected||restaurant!==draft)return;
+  modal('<h2>Draft preview</h2><p class="muted">Private preview · Shows the products available to guests.</p>'+
+    renderRestaurantMenu({...draft,...appearance,items:draft.items.filter(item=>item.available)},draft.originalLanguage||'en',{preview:true}));
+  document.querySelector('#overlay .modal')?.classList.add('menu-preview-modal');
+}
 edit=function(id){const d=state.items.find(x=>x.id===id)||{name:'',desc:'',price:'',category:'Mains',allergens:'',image:'',translations:{}};modal(`<h2>${id?'Edit product':'Add a delicious detail'}</h2><form onsubmit="saveDish(event,'${id||''}')"><label>Product name<input name="name" value="${esc(d.name)}" required maxlength="120"></label><div class="formgrid"><label>Price<input name="price" type="number" min="0" max="100000" step=".01" value="${d.price}" required></label><label>Category<input name="category" value="${esc(d.category)}" required maxlength="50"></label></div><label>Description<textarea name="desc" maxlength="600">${esc(d.desc)}</textarea></label><label>Allergens — verified by your restaurant<input name="allergens" value="${esc(d.allergens)}" maxlength="250"></label><label>Photo URL (HTTPS or uploaded photo)<input name="image" id="dish-image" value="${esc(d.image)}" placeholder="https://..."></label><label>Or upload JPEG / PNG / WebP (maximum 5 MB)<input type="file" accept="image/jpeg,image/png,image/webp" onchange="uploadPhoto(this)"></label><details><summary class="muted" style="cursor:pointer;margin:12px 0">Translations (optional)</summary>${Object.keys(LOCALES).filter(l=>l!==(restaurant.originalLanguage||'en')).map(lang=>`<div style="margin-top:15px"><b>${LOCALES[lang][0]}</b> <button type="button" class="btn small" data-language="${lang}" onclick="draftDishTranslation(this)">Generate translation</button><p class="fine" data-translation-status role="status"></p></div><label>Translated name<input name="${lang}-name" value="${esc(d.translations?.[lang]?.name||'')}" maxlength="120"></label><label>Category<input name="${lang}-category" value="${esc(d.translations?.[lang]?.category||'')}" maxlength="50"></label><label>Description<textarea name="${lang}-desc" maxlength="600">${esc(d.translations?.[lang]?.desc||'')}</textarea></label><label>Allergens<input name="${lang}-allergens" value="${esc(d.translations?.[lang]?.allergens||'')}" maxlength="250"></label>`).join('')}</details><button class="btn primary">Save product</button> ${id?`<button type="button" class="btn" onclick="removeDish('${id}')">Delete</button>`:''}</form>`)};
 async function draftDishTranslation(button){
   const form=button.form,language=button.dataset.language,status=button.parentElement.querySelector('[role=status]');
@@ -279,7 +291,68 @@ function guestOrderAction(labels){
   const total=[...guestOrder.values()].reduce((sum,quantity)=>sum+quantity,0);
   return `<section class="card" style="position:sticky;bottom:8px;z-index:2;padding:12px;margin-top:12px"><p class="fine">${esc(labels[1])}</p><button class="btn primary" ${open||!total?'disabled':''} onclick="request('OrderReady',this)">${esc(open?labels[3]:total?labels[0]+' ('+total+')':labels[2])}</button></section>`;
 }
-function liveMenu(){const shown=guest.items.filter(d=>category==='All'||d.category===category);const lang=Object.hasOwn(LOCALES,publicLanguage)?publicLanguage:(guest.originalLanguage||'en'),l=LOCALES[lang];const base=guest.originalLanguage||'en';const canPrepare=guest.service&&guest.table,orderText=orderLabels[lang]||orderLabels.en;const translate=(d,k)=>lang===base?d[k]:(d.translations?.[lang]?.[k]||d[k]);return `<div class="wrap" lang="${lang}"><div class="customer"><div class="cover"><div><span class="eyebrow" style="color:#ffe5e5">${guest.table?esc(guest.table.label||l[6]+' '+guest.table.number):l[5]}</span>${guest.logo?companyLogo(guest.logo):''}<h2>${esc(guest.name)}</h2><span style="font-size:13px">${l[7]}</span></div></div><div class="customer-body"><label>🌐 Menu language<select id="guest-menu-language" aria-label="Menu language" onchange="changeGuestLanguage(this.value)">${Object.entries(LOCALES).map(([code,labels])=>`<option value="${code}" ${lang===code?'selected':''}>${labels[0]}${code===base?' · Original':''}</option>`).join('')}</select></label>${guest.service&&guest.table?`<div class="servicebar">${['Waiter','Bill'].map((type,i)=>{const c=guestCalls.find(x=>x.type===type);return `<button class="btn ${i?'':'primary'}" ${c?'disabled':''} onclick="request('${type}')">${c?'✓ '+(c.status==='taken'?l[10]:l[9]):l[i+1]}</button>`}).join('')}</div>`:''}<p class="fine">${l[8]} ${lang!==base?l[12]:''}</p><div class="categories">${['All',...new Set(guest.items.map(d=>d.category))].map(c=>{const example=guest.items.find(d=>d.category===c);return `<button class="${category===c?'active':''}" data-category="${esc(c)}" onclick="category=this.dataset.category;render()">${c==='All'?l[3]:esc(example?translate(example,'category'):c)}</button>`}).join('')}</div>${shown.length?shown.map(d=>`<article class="dish"><div style="flex:1"><h3>${esc(translate(d,'name'))}</h3><p>${esc(translate(d,'desc'))}</p><p style="font-size:11px">${l[4]}: ${esc(translate(d,'allergens')||'—')}</p><b>${formatMenuPrice(d.price,guest.currency,lang==='no'?'nb':lang)}</b>${canPrepare?guestDishQuantity(d,translate(d,'name'),orderText):''}</div>${d.image?`<img src="${esc(d.image)}" alt="${esc(translate(d,'name'))}" onerror="this.style.display='none'">`:''}</article>`).join(''):`<p class="empty">${l[11]}</p>`}${canPrepare?guestOrderAction(orderText):''}${guest.plan==='Free'?'<p class="fine" style="text-align:center;margin-top:25px"><a href="/#home">Powered by Smart QR ↗</a></p>':''}</div></div></div>`}
+function liveMenu(){
+  return '<div class="wrap">'+renderRestaurantMenu(guest,publicLanguage)+'</div>';
+}
+
+function renderRestaurantMenu(menu,language,{preview=false}={}){
+  const base=Object.hasOwn(LOCALES,menu.originalLanguage)?menu.originalLanguage:'en';
+  const lang=Object.hasOwn(LOCALES,language)?language:base;
+  const labels=LOCALES[lang];
+  const orderText=orderLabels[lang]||orderLabels.en;
+  const canPrepare=!preview&&menu.service&&menu.table;
+  const translate=(item,key)=>lang===base?item[key]:(item.translations?.[lang]?.[key]||item[key]);
+  const groups=new Map();
+  for(const item of menu.items){
+    if(!groups.has(item.category))groups.set(item.category,[]);
+    groups.get(item.category).push(item);
+  }
+  const selected=!preview&&groups.has(guestCategory)?guestCategory:null;
+  const theme=['editorial','coffee','hotel'].includes(menu.theme)?menu.theme:'classic';
+  const accent=/^#[0-9a-f]{6}$/i.test(menu.accent||'')?menu.accent:'';
+  const font=menu.font==='serif'?'Georgia,serif':menu.font==='sans'?'Arial,sans-serif':'';
+  const appearance=[accent&&'--menu-accent:'+accent,font&&'--menu-heading-font:'+font].filter(Boolean).join(';');
+  const groupName=items=>esc(translate(items[0],'category'));
+  const product=item=>{
+    const name=translate(item,'name');
+    const description=translate(item,'desc');
+    const allergens=translate(item,'allergens');
+    const price=formatMenuPrice(item.price,menu.currency,lang==='no'?'nb':lang);
+    return `<article class="qr-menu-product">
+      ${item.image?`<img class="qr-menu-photo" src="${esc(item.image)}" alt="" loading="lazy" decoding="async" onerror="this.hidden=true">`:''}
+      <div class="qr-menu-product-body">
+        <div class="qr-menu-product-title"><h4>${esc(name)}</h4><strong class="qr-menu-price">${esc(price)}</strong></div>
+        ${description?`<p>${esc(description)}</p>`:''}
+        <p class="qr-menu-allergens"><strong>${labels[4]}</strong> · ${esc(allergens||'—')}</p>
+        ${canPrepare?guestDishQuantity(item,name,orderText):''}
+      </div>
+    </article>`;
+  };
+  return `<div class="customer qr-menu public-theme-${theme}${accent?' custom-accent':''}" lang="${lang}" style="${appearance}">
+    <header class="qr-menu-cover">
+      ${menu.logo?companyLogo(menu.logo):''}
+      <span>${menu.table?esc(menu.table.label||labels[6]+' '+menu.table.number):labels[5]}</span>
+      <h2>${esc(menu.name)}</h2>
+    </header>
+    <div class="qr-menu-content">
+      ${preview?'':`<div class="qr-menu-tools">
+        <label for="guest-menu-language">Menu language<select id="guest-menu-language" onchange="changeGuestLanguage(this.value)">${Object.entries(LOCALES).map(([code,l])=>`<option value="${code}" ${lang===code?'selected':''}>${l[0]}${code===base?' · Original':''}</option>`).join('')}</select></label>
+        ${canPrepare?`<div class="servicebar">${['Waiter','Bill'].map((type,i)=>{
+          const call=guestCalls.find(x=>x.type===type);
+          return `<button class="btn ${i?'':'primary'}" ${call?'disabled':''} onclick="request('${type}')">${call?'✓ '+(call.status==='taken'?labels[10]:labels[9]):labels[i+1]}</button>`;
+        }).join('')}</div>`:''}
+      </div>`}
+      <p class="qr-menu-note">${labels[8]} ${lang!==base?labels[12]:''}</p>
+      ${!preview&&groups.size>1?`<div class="categories qr-menu-categories">
+        <button type="button" class="${selected===null?'active':''}" aria-pressed="${selected===null}" onclick="guestCategory=null;render()">${labels[3]}</button>
+        ${[...groups].map(([key,items])=>`<button type="button" class="${selected===key?'active':''}" aria-pressed="${selected===key}" data-category="${esc(key)}" onclick="guestCategory=this.dataset.category;render()">${groupName(items)}</button>`).join('')}
+      </div>`:''}
+      ${groups.size?[...groups].filter(([key])=>selected===null||key===selected).map(([,items])=>`<section class="qr-menu-group"><h3>${groupName(items)}</h3><div class="qr-menu-grid">${items.map(product).join('')}</div></section>`).join(''):`<p class="empty">${labels[11]}</p>`}
+      ${canPrepare?guestOrderAction(orderText):''}
+      ${menu.plan==='Free'?`<p class="qr-menu-credit"><a href="/#home">Powered by Smart QR</a></p>`:''}
+    </div>
+  </div>`;
+}
 async function copyLink(){try{await navigator.clipboard.writeText(menuURL());toast('Menu link copied.')}catch{modal('<h2>Your menu link</h2><input readonly value="'+esc(menuURL())+'" onclick="this.select()">')}}
 async function tableAction(id,enabled){try{await api('table/'+id,'PATCH',{enabled});await workspace();toast(enabled?'Table enabled.':'Table disabled.')}catch(e){toast(e.message)}}
 function rotateTable(id){modal(`<h2>Replace this table code?</h2><p class="muted">The old QR will stop working. You must print and place the new code on the table.</p><button class="btn primary" onclick="confirmRotate('${id}')">Replace code</button>`)}
