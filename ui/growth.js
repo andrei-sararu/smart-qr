@@ -32,9 +32,63 @@ if(ready)render();
 
 /* Focused marketing views, with shareable hash routes and browser history. */
 const fullMarketingHome=home;
-const marketingRoutes={product:['product','features','languages','how'],examples:['examples'],pricing:['pricing'],performance:['performance','opportunity'],resources:['performance','opportunity','faq'],faq:['faq'],contact:['contact'],calculator:['potential'],evidence:['evidence']};
+const marketingRoutes={products:[],product:['product','features','languages','how'],examples:['examples'],pricing:['pricing'],performance:['performance','opportunity'],resources:['performance','opportunity','faq'],faq:['faq'],contact:['contact'],calculator:['potential'],evidence:['evidence']};
 function marketingSection(id){const t=document.createElement('template');t.innerHTML=fullMarketingHome();return t.content.querySelector('#'+id)?.outerHTML||''}
-function marketingPage(id){const titles={product:'Product',examples:'Example menus',pricing:'Plans & pricing',performance:'Service insights',resources:'Resources',faq:'Frequently asked questions',contact:'Contact',calculator:'Sales calculator',evidence:'Industry research'};return '<main class="wrap focused-page"><a class="breadcrumb" href="/#home">Home</a> <span class="muted"> / '+titles[id]+'</span>'+marketingRoutes[id].map(marketingSection).join('')+((id==='resources'||id==='performance')?'<div class="actions"><a class="btn" href="/#calculator">Sales calculator</a><a class="btn" href="/#evidence">Industry research</a></div>':'')+'<div class="bottom"><div><h2>Ready to create your digital menu?</h2></div><button class="btn primary" onclick="onboard()">Start free</button></div>'+marketingFooter()+'</main>'}
+const productCatalogue=[
+  {
+    title:'Digital QR menu', plan:'Free, Menu Pro & Service',
+    summary:'Give guests a mobile menu they can open from a printed QR code or a link. Update the menu during service and keep the same printed code.',
+    features:['Organise dishes by category with photos, prices and verified allergen information.','Hide sold-out items and publish changes from the menu editor.','Choose a theme, accent colour and typography. Add your venue logo with a paid Menu Pro or Service subscription.'],
+    href:'/#demo', action:'Try the guest menu'
+  },
+  {
+    title:'Menu import & translation', plan:'Menu editor',
+    summary:'Bring an existing menu into Smart QR and prepare it for guests who speak different languages.',
+    features:['Import a CSV or paste spreadsheet rows, then review categories and prices.','Extract a draft from a PDF or photo and verify the results before making dishes available.','Offer menu controls in 16 languages. Generate editable translations for dish text and enter verified allergen translations yourself.'],
+    href:'/#help?topic=products', action:'See the import guide'
+  },
+  {
+    title:'Print & table QR codes', plan:'Menu PDF, general QR & table cards',
+    summary:'Put the right QR code on your counter, in your window or on each table. Keep printed materials alongside your digital menu.',
+    features:['Download an A4 menu PDF and include your saved venue logo when available.','Use one general QR code for browsing or table-specific codes for the Service workflow.','Configure up to 100 tables with names or numbers, seating capacity and indoor or outdoor areas.'],
+    href:'/#help?topic=tables', action:'See the table setup guide'
+  },
+  {
+    title:'Table service & staff board', plan:'Service',
+    summary:'Let guests ask for service from their table and give staff one board to see which tables are waiting.',
+    features:['Guests can call a waiter, request the bill or send a dish list with quantities.','Staff claim requests, confirm the dish list at the table and enter the order in the restaurant’s existing till.','The open staff board highlights unclaimed requests after three minutes and can sound an alert when enabled.'],
+    href:'/#product', action:'Try the service demo'
+  },
+  {
+    title:'Service insights', plan:'Restaurant workspace',
+    summary:'Review how quickly your team picks up requests and spot menu entries that need attention.',
+    features:['See request volumes and measured response times in Service pulse.','Review menu completeness, including missing photos, descriptions and allergen information.'],
+    href:'/#help?topic=service', action:'See the service guide'
+  }
+];
+
+function productsPage(){
+  return `<main class="wrap focused-page products-page">
+    <a class="breadcrumb" href="/#home">Home</a> <span class="muted"> / Products</span>
+    <section class="products-hero">
+      <h1>Smart QR products</h1>
+      <p>Publish a digital menu, print QR codes for your venue and manage table requests on one platform. Start with a menu and add table service when you need it.</p>
+      <div class="actions"><a class="btn primary" href="/#pricing">Compare plans</a><a class="btn" href="/#demo">Try the guest demo</a></div>
+    </section>
+    <div class="products-grid">
+      ${productCatalogue.map(product=>`<article class="product-summary">
+        <span class="product-scope">${product.plan}</span>
+        <h2>${product.title}</h2>
+        <p>${product.summary}</p>
+        <ul>${product.features.map(feature=>`<li>${feature}</li>`).join('')}</ul>
+        <a class="btn" href="${product.href}">${product.action}</a>
+      </article>`).join('')}
+    </div>
+    <section class="quick-start"><div><h2>Set up your first menu</h2><p class="muted">New workspaces start with a 14-day Service trial. No card required.</p></div><button class="btn primary" onclick="onboard()">Start free</button></section>
+    ${marketingFooter()}
+  </main>`;
+}
+function marketingPage(id){if(id==='products')return productsPage();const titles={product:'Product',examples:'Example menus',pricing:'Plans & pricing',performance:'Service insights',resources:'Resources',faq:'Frequently asked questions',contact:'Contact',calculator:'Sales calculator',evidence:'Industry research'};return '<main class="wrap focused-page"><a class="breadcrumb" href="/#home">Home</a> <span class="muted"> / '+titles[id]+'</span>'+marketingRoutes[id].map(marketingSection).join('')+((id==='resources'||id==='performance')?'<div class="actions"><a class="btn" href="/#calculator">Sales calculator</a><a class="btn" href="/#evidence">Industry research</a></div>':'')+'<div class="bottom"><div><h2>Ready to create your digital menu?</h2></div><button class="btn primary" onclick="onboard()">Start free</button></div>'+marketingFooter()+'</main>'}
 home=function(){return '<main class="wrap focused-home">'+growthHero()+impactSection()+'<section class="quick-start"><div><h2>Ready for your first digital menu?</h2><p class="muted">Explore the product or compare plans before you start.</p></div><div class="actions"><a class="btn" href="/#pricing">See pricing</a><button class="btn primary" onclick="onboard()">Start free</button></div></section>'+marketingFooter()+'</main>'};
 navTo=function(id){go(({features:'product',languages:'product',how:'product',opportunity:'performance',potential:'calculator',confidence:'privacy'})[id]||id)};
 const focusedHeader=header;
@@ -45,7 +99,7 @@ window.addEventListener('hashchange',()=>window.scrollTo(0,0));
 if(ready)render();
 
 /* Commercial homepage: clear value proposition, product-led visual, direct navigation. */
-home=function(){return `<main class="premium-home"><section class="premium-hero wrap"><div class="premium-copy"><span class="premium-kicker"><span></span> BUILT FOR HOSPITALITY</span><h1>Great service starts<br>with a <em>smart menu.</em></h1><p>Give guests a beautiful digital menu and your team a simpler way to manage table requests. All from one QR code.</p><div class="actions"><button class="btn primary" onclick="onboard()">Create your free menu <span aria-hidden="true">→</span></button><a class="btn" href="/#product">Explore the product</a></div><div class="premium-reassurance">✓ No credit card required &nbsp; · &nbsp; 14-day Service trial</div></div><div class="premium-visual"><div class="premium-visual-label">SMART QR <span>PRODUCT PREVIEW</span></div><div id="hero-scene">${heroScene()}</div></div></section><div class="premium-band"><div class="wrap premium-band-inner"><span>Designed for restaurants, cafés and bars</span><span>16 menu languages</span><span>No guest app needed</span></div></div><section class="wrap premium-features"><div class="premium-section-heading"><span class="premium-kicker">ONE PLATFORM. LESS ADMIN.</span><h2>Everything you need for a smarter service.</h2><p>Start with your menu. Add table service when you need it.</p></div><div class="premium-feature-grid">${[['01','Digital menus','Publish dishes, photographs, prices and translations. Update your menu without reprinting your QR codes.','product'],['02','Table service','Let guests request a waiter or the bill. Give staff a shared view of requests.','product'],['03','Service insights','Track response times and spot missing menu information in your workspace.','performance']].map(x=>`<article><span class="premium-number">${x[0]}</span><h3>${x[1]}</h3><p>${x[2]}</p><a href="/#${x[3]}">Learn more →</a></article>`).join('')}</div></section><section class="wrap premium-close"><div><h2>Make your next service simpler.</h2><p>Start free, then choose the plan that fits your venue.</p></div><a class="btn primary" href="/#pricing">Explore plans →</a></section><div class="wrap">${marketingFooter()}</div></main>`};
+home=function(){return `<main class="premium-home"><section class="premium-hero wrap"><div class="premium-copy"><span class="premium-kicker"><span></span> BUILT FOR HOSPITALITY</span><h1>Great service starts<br>with a <em>smart menu.</em></h1><p>Give guests a beautiful digital menu and your team a simpler way to manage table requests. All from one QR code.</p><div class="actions"><button class="btn primary" onclick="onboard()">Create your free menu <span aria-hidden="true">→</span></button><a class="btn" href="/#products">Explore products</a></div><div class="premium-reassurance">✓ No credit card required &nbsp; · &nbsp; 14-day Service trial</div></div><div class="premium-visual"><div class="premium-visual-label">SMART QR <span>PRODUCT PREVIEW</span></div><div id="hero-scene">${heroScene()}</div></div></section><div class="premium-band"><div class="wrap premium-band-inner"><span>Designed for restaurants, cafés and bars</span><span>16 menu languages</span><span>No guest app needed</span></div></div><section class="wrap premium-features"><div class="premium-section-heading"><span class="premium-kicker">ONE PLATFORM. LESS ADMIN.</span><h2>Everything you need for a smarter service.</h2><p>Start with your menu. Add table service when you need it.</p></div><div class="premium-feature-grid">${[['01','Digital menus','Publish dishes, photographs, prices and translations. Update your menu without reprinting your QR codes.','product'],['02','Table service','Let guests request a waiter or the bill. Give staff a shared view of requests.','product'],['03','Service insights','Track response times and spot missing menu information in your workspace.','performance']].map(x=>`<article><span class="premium-number">${x[0]}</span><h3>${x[1]}</h3><p>${x[2]}</p><a href="/#${x[3]}">Learn more →</a></article>`).join('')}</div></section><section class="wrap premium-close"><div><h2>Make your next service simpler.</h2><p>Start free, then choose the plan that fits your venue.</p></div><a class="btn primary" href="/#pricing">Explore plans →</a></section><div class="wrap">${marketingFooter()}</div></main>`};
 const premiumHeader=header;
 header=function(){return premiumHeader().replace('href="/#faq">FAQ</a>','href="/#help">User guide</a>').replace('href="/#faq" aria-current="page">FAQ</a>','href="/#help">User guide</a>').replace('<a class="desktop" href="/#resources">Resources</a>','').replace('>Start free →','>Start free')};
 if(ready)render();
