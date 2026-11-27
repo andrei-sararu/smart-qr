@@ -43,14 +43,15 @@
 .scene-content,.language-preview-body{min-height:0;overflow-y:auto;overscroll-behavior:contain}
 
 .qr-menu {
-  --menu-accent: #9a3c24;
-  --menu-paper: #faf7f1;
-  --menu-card: #fffdf9;
-  --menu-text: #27231d;
-  --menu-muted: #65594c;
-  --menu-border: #e6dbcc;
-  --menu-cover: #272720;
-  --menu-cover-text: #fff9ee;
+  --menu-accent: var(--green);
+  --menu-paper: #fff;
+  --menu-card: var(--cream);
+  --menu-text: var(--ink);
+  --menu-muted: var(--muted);
+  --menu-border: var(--line);
+  --menu-cover: linear-gradient(0deg,#21191de8,#21191d55),url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1000&auto=format&fit=crop') center/cover;
+  --menu-cover-text: #fff;
+  --menu-category-active: var(--green);
   --menu-heading-font: Georgia, serif;
   max-width: 880px;
   margin: clamp(12px, 4vw, 36px) auto 64px;
@@ -59,26 +60,38 @@
   border-color: var(--menu-border);
 }
 .qr-menu.public-theme-editorial {
-  --menu-accent: #e1bb79;
+  --menu-accent: #b69a64;
   --menu-paper: #14251d;
-  --menu-card: #1d3026;
-  --menu-text: #fff5e1;
-  --menu-muted: #ddd0b5;
-  --menu-border: #776648;
-  --menu-cover: #101d17;
+  --menu-card: #14251d;
+  --menu-text: #f8f1df;
+  --menu-muted: #e5ce99;
+  --menu-border: #b69a6455;
+  --menu-cover: #14251d;
+  --menu-cover-text: #e5ce99;
 }
 .qr-menu.public-theme-coffee {
-  --menu-accent: #944825;
+  --menu-accent: #e9b27c;
   --menu-paper: #fff5e8;
-  --menu-text: #40271c;
+  --menu-card: #fff;
+  --menu-text: #512d1e;
+  --menu-muted: #654437;
+  --menu-border: #eadbc9;
   --menu-cover: #e9b27c;
   --menu-cover-text: #40271c;
 }
 .qr-menu.public-theme-hotel {
-  --menu-accent: #47613d;
+  --menu-accent: #394a36;
   --menu-paper: #faf8f1;
-  --menu-text: #303e2d;
+  --menu-card: #faf8f1;
+  --menu-text: #394a36;
+  --menu-muted: #52634e;
+  --menu-border: #a7ad90;
   --menu-cover: #394a36;
+  --menu-category-active: #394a36;
+}
+.qr-menu.custom-accent {
+  --menu-cover: linear-gradient(110deg,#0005,#0007),var(--menu-accent);
+  --menu-cover-text: #fff;
 }
 .qr-menu-cover {
   display: grid;
@@ -101,7 +114,7 @@
 .qr-menu-credit {margin: 26px 0 0; text-align: center;}
 .qr-menu .qr-menu-categories {margin: 16px 0 0; padding: 4px 2px 8px;}
 .qr-menu .qr-menu-categories button {background: var(--menu-card); color: var(--menu-text); border-color: var(--menu-border);}
-.qr-menu .qr-menu-categories button.active {background: var(--menu-text); border-color: var(--menu-text); color: var(--menu-paper);}
+.qr-menu .qr-menu-categories button.active {background: var(--menu-category-active); border-color: var(--menu-category-active); color: #fff;}
 .qr-menu-group {margin-top: 26px;}
 .qr-menu-group > h3 {
   display: flex;
