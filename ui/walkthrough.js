@@ -1,7 +1,7 @@
 const restaurantWalkthrough=[
   ['Scan the QR at Table 7','The table code opens the menu in the guest’s browser and identifies the table.','Menu opens','Table 7 · The Greenhouse','Ready for requests','The service board is open on the staff tablet.'],
-  ['Choose dishes and send the list','The guest picks mushroom risotto and adds extra Parmesan. Smart QR sends the selections and table number to the board.','Dish list sent','1 × Mushroom risotto · extra Parmesan','New dish list · Table 7','Mushroom risotto + extra Parmesan · waiting for staff'],
-  ['The waiter receives the request','The waiter sees the new request on the service board. If sound is enabled on the open board, it can play an alert.','Waiting for confirmation','Table 7 · your list is with the team','Table 7 needs attention','The waiter takes the request and checks the dish list with the guest.'],
+  ['Choose your dishes and call the waiter','Add mushroom risotto with extra Parmesan. At the bottom of the menu, tap Ready to order to call the waiter with your dish list.','Dish list sent','1 × Mushroom risotto · extra Parmesan','New dish list · Table 7','Mushroom risotto + extra Parmesan · waiting for staff'],
+  ['The waiter receives the request','The waiter sees Table 7 and the selected dishes on the service board. The guest sees Order list sent.','Order list sent','Table 7 · confirm your order with the waiter','Table 7 needs attention','The waiter takes the request and checks the dish list with the guest.'],
   ['Confirm, prepare and serve','After confirming the order at the table, staff move it through preparation and mark it served.','Order served','The waiter brings the risotto to Table 7.','Served · Table 7','The confirmed order is included in the open table bill.'],
   ['The guest requests the bill','The guest selects Request bill. A new request appears on the same service board for Table 7.','Bill requested','The team has received your request.','New bill request · Table 7','The waiter opens the table bill and takes payment at the till.'],
   ['Staff close the table bill','After payment at the till, staff close the bill in Smart QR.','Paid at the till','The guest’s visit is complete.','Bill closed · Table 7','Payment recorded by staff after taking it at the till.']
@@ -27,9 +27,9 @@ function walkthroughScreens(kind,index){
         staff=`<div class="walk-board-tabs"><span>Requests</span><span>Orders</span><span>Bills</span></div>`+ticket('quiet');
         break;
       case 1:
-        phone=dish+`<h3>Mushroom risotto</h3><p>1 serving · Extra Parmesan</p>`+control('Send dish list',true);
+        phone=dish+`<h3>Mushroom risotto</h3><p>1 serving · Extra Parmesan</p>`+control('Ready to order (1)',true);
         staff=ticket('arrival','<span class="walk-badge">New request</span>');
-        transfer='Dish list sent to staff';
+        transfer='Table 7 and dish list sent to staff';
         break;
       case 2:
         phone=`<div class="walk-confirm"><span>✓</span><h3>${guest}</h3><p>${guestDetail}</p></div>`;
@@ -80,7 +80,7 @@ function workflowWalkthrough(kind){
   return `<main class="wrap workflow-demo" data-walkthrough="${kind}">
     <nav class="actions" aria-label="Demo journeys"><a class="btn ${restaurant?'primary':''}" href="/#demo" ${restaurant?'aria-current="page"':''}>Restaurant service</a><a class="btn ${restaurant?'':'primary'}" href="/#platform-demo" ${restaurant?'':'aria-current="page"'}>Asset reporting</a></nav>
     <p class="workflow-kicker">Automatic product walkthrough</p>
-    <h1>${restaurant?'From table scan to closed bill':'From equipment scan to resolved fault'}</h1>
+    <h1>${restaurant?'From table scan to waiter service':'From equipment scan to resolved fault'}</h1>
     <p class="muted">Follow ${restaurant?'the guest’s phone and the waiter’s service board':'the resident’s phone and the maintenance workspace'} side by side. Illustrative journey.</p>
     <ol class="workflow-progress" aria-label="Walkthrough chapters">${steps.map(([title],i)=>`<li ${i===0?'aria-current="step"':''}><button type="button" data-chapter="${i}" onclick="seekWalkthrough(this,Number(this.dataset.chapter))"><span>${i+1}</span> ${title}</button></li>`).join('')}</ol>
     <section class="workflow-scene" aria-label="Current chapter">
