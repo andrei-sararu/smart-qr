@@ -418,8 +418,26 @@ async function savePlatform(event){
 async function platformHistory(id){
   try{
     const {history}=await api('platform/'+id+'/history');
-    modal(`<h2>Version history</h2>${history.map(entry=>`<details class="card"><summary>Version ${entry.revision} · ${esc(new Date(entry.created).toLocaleString())}</summary><p>${esc(entry.profile.title+' · '+entry.profile.status)}</p><p class="fine">${esc([entry.profile.project,...(entry.profile.tags||[]),entry.profile.expires?'Expires '+new Date(entry.profile.expires).toISOString():''].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${entry.profile.schedule?esc('Scheduled: '+entry.profile.schedule.url+' · '+new Date(entry.profile.schedule.starts).toISOString()+' to '+new Date(entry.profile.schedule.ends).toISOString()):''}</p><ul>${entry.profile.actions.map(action=>`<li class="cotiso-report">${esc(action.label+': '+action.url)}</li>`).join('')}</ul></details>`).join('')}`);
+    const current=history[0]?.revision;
+    modal(`<h2>Version history</h2><p class="muted">Restoring creates a new version. Your printed QR, current status and expiry stay the same.</p>
+      ${history.map(entry=>`<details class="card"><summary>Version ${entry.revision}${entry.revision===current?' · Current':''} · ${esc(new Date(entry.created).toLocaleString())}</summary>
+      <p>${esc(entry.profile.title+' · '+entry.profile.status)}</p>
+      ${entry.profile.restoredFrom?`<p class="fine">Restored from version ${entry.profile.restoredFrom}</p>`:''}
+      <p class="fine">${esc([entry.profile.project,...(entry.profile.tags||[]),entry.profile.expires?'Expires '+new Date(entry.profile.expires).toISOString():''].filter(Boolean).join(' · '))}</p>
+      <p class="cotiso-report">${entry.profile.schedule?esc('Scheduled: '+entry.profile.schedule.url+' · '+new Date(entry.profile.schedule.starts).toISOString()+ ' to '+new Date(entry.profile.schedule.ends).toISOString()):''}</p>
+      <ul>${entry.profile.actions.map(action=>`<li class="cotiso-report">${esc(action.label+': '+action.url)}</li>`).join('')}</ul>
+      ${entry.revision===current?'':`<button class="btn small" type="button" onclick="restorePlatformVersion(this,'${esc(id)}',${current},${entry.revision})">Restore this version</button><p role="status"></p>`}</details>`).join('')}`);
   }catch(error){toast(error.message)}
+}
+async function restorePlatformVersion(button,id,revision,restoreRevision){
+  if(!confirm('Restore version '+restoreRevision+'? This changes what people see when they scan an active QR code.'))return;
+  button.disabled=true;
+  try{
+    await api('platform/'+id+'/restore','POST',{revision,restoreRevision});
+    await loadPlatform();
+    await platformHistory(id);
+    toast('Version restored.');
+  }catch(error){button.nextElementSibling.textContent=error.message;button.disabled=false}
 }
 const beforePlatformRender=render;
 render=function(){

@@ -170,3 +170,21 @@ test('Report workflow retains status, rejects stale updates and protects account
   assert.equal((await call(path,'PUT',{status:'resolved',updated})).status,200);
   assert.equal((await reports())[0].status,'resolved');
 });
+
+test('Restoring a version preserves QR identity and lifecycle and creates a new revision',async()=>{
+  const {call}=fixture();
+  const {id}=await (await call('/api/platform','POST',{...profile,mode:'dynamic'})).json();
+  const admin='/api/platform/'+id,scan='/q/'+id;
+  const edited={...profile,mode:'dynamic',status:'paused',expires:1,actions:[{label:'Replacement',url:'https://example.org/new'}],revision:1};
+  assert.equal((await call(admin,'PUT',edited)).status,200);
+  assert.equal((await call(admin+'/restore','POST',{revision:2,restoreRevision:1},'account-b')).status,404);
+  assert.equal((await call(admin+'/restore','POST',{revision:1,restoreRevision:1})).status,409);
+  assert.equal((await call(admin+'/restore','POST',{revision:2,restoreRevision:2})).status,400);
+  assert.equal((await call(admin+'/restore','POST',{revision:2,restoreRevision:1})).status,200);
+  const dashboard=await (await call('/api/platform')).json(),[restored]=dashboard.profiles;
+  assert.deepEqual([restored.id,restored.revision,restored.status,restored.expires,restored.actions[0].url],[id,3,'paused',1,profile.actions[0].url]);
+  assert.equal((await call(scan)).status,404);
+  const {history}=await (await call(admin+'/history')).json();
+  assert.equal(history[0].profile.restoredFrom,1);
+  assert.equal(history[1].profile.actions[0].url,'https://example.org/new');
+});
