@@ -57,7 +57,7 @@ const productCatalogue=[
     title:'Table service & staff board', plan:'Included in Service',
     summary:'Let guests ask for service from their table and give staff one board to see which tables are waiting.',
     features:['Guests can call a waiter, request the bill or send a dish list with quantities.','Staff claim requests, confirm the dish list at the table and enter the order in the restaurant’s existing till.','The open staff board highlights unclaimed requests after three minutes and can sound an alert when enabled.'],
-    href:'/#product', action:'Try the service demo'
+    href:'/#demo', action:'Try the full table demo'
   },
   {
     title:'Service insights', plan:'Included in Free',

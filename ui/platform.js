@@ -26,13 +26,24 @@ home=function(){
 };
 const platformHeader=header;
 header=function(){
-  if(!['home','platform','platform-demo'].includes(view))return platformHeader();
-  return `<div class="wrap"><header class="cotiso-header"><a class="brand" href="/#home"><img class="brand-icon" src="/favicon.svg?v=2" width="36" height="36" alt="">Cotiso QR</a><nav class="nav" aria-label="Main navigation"><a href="/#hospitality">Hospitality</a><a class="btn primary small" href="/#platform">${session?'Workspace':'Start free'}</a></nav></header></div>`;
+  if(!['home','platform','platform-demo','platform-products','platform-guide'].includes(view))return platformHeader();
+  return `<div class="wrap"><header class="cotiso-header"><a class="brand" href="/#home"><img class="brand-icon" src="/favicon.svg?v=2" width="36" height="36" alt="">Cotiso QR</a><nav class="nav" aria-label="Main navigation"><a href="/#platform-products">Products</a><a href="/#platform-guide">Guide</a><a href="/#hospitality">Hospitality</a><a class="btn primary small" href="/#platform">${session?'Workspace':'Start free'}</a></nav></header></div>`;
 };
 function platformDemo(){
   return `<main class="wrap cotiso-workspace"><a class="breadcrumb" href="/#home">Home</a><h1>From boiler label to repair report</h1><p>Example asset · B1024 · Riverside House</p>
-  <details class="card"><summary>View example instructions</summary><p>Check the equipment label and contact your maintenance team if the unit displays a fault.</p></details>
-  <details class="card"><summary>Preview the issue form</summary><p>A visitor describes the issue. In a published profile, their report is saved to the owner’s inbox with the asset reference and location.</p><p>This example does not collect or send reports.</p></details>
+  <section class="cotiso-demo-grid">
+    <div class="card"><h2>Guest phone</h2><button class="btn primary" type="button" onclick="openAssetDemo()">Scan equipment QR</button>
+      <div id="asset-demo-profile" hidden><h3>Boiler B1024</h3><p>Plant room · Riverside House</p>
+      <details><summary>View example instructions</summary><p>Read the equipment label and contact maintenance if the unit displays a fault.</p></details>
+      <details id="asset-demo-form"><summary>Report an issue</summary><form onsubmit="sendAssetDemoReport(event)">
+        <label>What happened?<textarea name="message" required maxlength="180" placeholder="Example: Boiler is displaying an error"></textarea></label>
+        <button class="btn primary">Submit sample report</button></form></details></div>
+    </div>
+    <div class="card"><h2>Maintenance inbox</h2><p>Sample data stays in this page and is cleared on reload.</p>
+      <p id="asset-demo-status" role="status">Waiting for a scan</p><p id="asset-demo-message"></p>
+      <button id="asset-demo-progress" class="btn" type="button" hidden onclick="progressAssetDemo(this)">Start work</button>
+    </div>
+  </section>
   <section class="card"><h2>Try an editable QR destination</h2><p>Change the destination, then simulate a scan. The example QR reference stays the same.</p>
     <label>Example destination<select id="cotiso-demo-destination"><option>Equipment instructions</option><option>Weekend maintenance notice</option></select></label>
     <button class="btn" type="button" onclick="document.getElementById('cotiso-demo-result').textContent='Example QR B1024 opens: '+document.getElementById('cotiso-demo-destination').value">Simulate scan</button>
@@ -40,6 +51,52 @@ function platformDemo(){
     <p class="fine">Live dynamic codes can switch destinations automatically on a UTC schedule. Codes can also be grouped, cloned and imported in bulk.</p>
   </section>
   <p><a class="btn primary" href="/#platform">Create a real profile</a> <a class="btn" href="/#demo">Try the restaurant demo</a></p></main>`;
+}
+function openAssetDemo(){
+  document.getElementById('asset-demo-profile').hidden=false;
+  const status=document.getElementById('asset-demo-status');
+  if(status.textContent==='Waiting for a scan')status.textContent='Scan recorded · B1024';
+}
+function sendAssetDemoReport(event){
+  event.preventDefault();
+  const message=String(new FormData(event.currentTarget).get('message')).trim();
+  if(!message)return;
+  document.getElementById('asset-demo-message').textContent=message;
+  document.getElementById('asset-demo-status').textContent='New report · B1024 · Riverside House';
+  const next=document.getElementById('asset-demo-progress');
+  next.hidden=false;
+  next.disabled=false;
+  next.textContent='Start work';
+}
+function progressAssetDemo(button){
+  const started=button.textContent==='Start work';
+  document.getElementById('asset-demo-status').textContent=started?'In progress · B1024':'Resolved · B1024';
+  button.textContent=started?'Mark resolved':'Resolved';
+  button.disabled=!started;
+}
+const platformProductCards=[
+  ['QR codes','Create static or editable links. Schedule a temporary destination, group codes into projects and import or export them in bulk.','codes'],
+  ['Smart QR Profiles','Give an asset or location a public page with links and an issue form. Keep the same printed code when you edit the profile.','profiles'],
+  ['Reports and analytics','See tracked visits, actions and reports. Move a report from New to In progress to Resolved and export the filtered list.','reports'],
+  ['Hospitality','Publish a digital menu, configure table codes and follow orders from confirmation to the table bill. Add separate restaurant locations from one account.','hospitality']
+];
+function platformProducts(){
+  return `<main class="wrap cotiso-workspace"><h1>Cotiso QR products</h1><p>Choose the tools for your asset, customer touchpoint or restaurant.</p><div class="cotiso-cases">
+    ${platformProductCards.map(([title,description,key])=>`<article><h2>${title}</h2><p>${description}</p><div class="actions"><a class="btn small" href="${key==='hospitality'?'/#help?topic=locations':'/#platform-guide?topic='+key}">View guide</a>${key==='hospitality'?'<a class="btn small" href="/#products">Hospitality products</a>':''}<a class="btn small" href="${key==='hospitality'?'/#demo':'/#platform-demo'}">Try demo</a></div></article>`).join('')}</div>
+    <a class="btn primary" href="/#platform">Open workspace</a></main>`;
+}
+const platformGuideTopics={
+  codes:[['Choose a code type','Pick Dynamic link if you expect its destination to change. A Static link always opens its original address.'],['Save the destination','Enter the HTTPS address. Use Optional settings for an expiry or scheduled destination.'],['Test and download','Open the saved code to check the destination. Download PNG or SVG and test the printed code before distributing it.']],
+  profiles:[['Identify the asset','Choose Smart QR Profile and enter an asset title, reference and location.'],['Add actions','Add links to public instructions or information. Enable the issue form to receive reports.'],['Activate and test','Set the profile to Active, open the public page and submit a sample issue. Check Reports before printing.']],
+  reports:[['Open the inbox','In Workspace, select Reports. Find the entry by asset title, reference or location.'],['Update its status','Change New to In progress when you start work and to Resolved when finished.'],['Review outcomes','Use Analytics to review scans, actions and submissions. Export the filtered reports to CSV when you need a copy.']]
+};
+function platformGuide(){
+  const requested=new URLSearchParams(location.hash.split('?')[1]).get('topic');
+  const topic=Object.hasOwn(platformGuideTopics,requested)?requested:'codes';
+  return `<main class="wrap cotiso-workspace"><h1>Cotiso QR user guide</h1>
+    <nav class="actions" aria-label="Guide topics">${platformProductCards.filter(([, ,key])=>key!=='hospitality').map(([title,,key])=>`<a class="btn ${topic===key?'primary':''}" ${topic===key?'aria-current="page"':''} href="/#platform-guide?topic=${key}">${title}</a>`).join('')}<a class="btn" href="/#help">Restaurant guide</a></nav>
+    <div class="cotiso-guide-steps">${platformGuideTopics[topic].map(([title,copy],index)=>`<details class="card" ${index===0?'open':''}><summary><span>${index+1}</span> ${title}</summary><p>${copy}</p></details>`).join('')}</div>
+    <div class="actions"><a class="btn primary" href="/#platform-demo">Practice in the demo</a><a class="btn" href="/#platform">Open workspace</a></div></main>`;
 }
 async function loadPlatform(){
   if(!session||platformPending)return;
@@ -71,7 +128,7 @@ function platformWorkspace(){
   return `<main class="wrap cotiso-workspace"><div class="cotiso-dashboard">
     <nav aria-label="Workspace navigation">${Object.entries(platformSections).map(([key,label])=>`<a href="/#platform?tab=${key}" ${section===key?'aria-current="page"':''}>${label}</a>`).join('')}<button type="button" onclick="signOutLocal()">Sign out</button></nav>
     <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>${platformSections[section]}</h1></div>${['overview','codes','help'].includes(section)?'<button class="btn primary" onclick="platformEditor()">Create QR code</button>':''}</div>
-    ${section==='overview'?`<section class="card"><h2>${profiles.length?'Your QR workspace':'Set up your first QR code'}</h2><p class="muted">${profiles.length?`You have ${profiles.length} of 25 codes in this workspace.`:'Start with an asset, location or link that you want people to open from a printed code.'}</p>${profiles.length?'':steps}<div class="actions"><a class="btn" href="/#platform?tab=codes">Manage QR codes</a><a class="btn" href="/#platform?tab=help">Read the setup guide</a></div></section>`:''}
+    ${section==='overview'?`<section class="card"><h2>${profiles.length?'Your QR workspace':'Set up your first QR code'}</h2><p class="muted">${profiles.length?`You have ${profiles.length} of 25 codes in this workspace.`:'Start with an asset, location or link that you want people to open from a printed code.'}</p>${profiles.length?'':steps}<div class="actions"><a class="btn" href="/#platform?tab=codes">Manage QR codes</a><a class="btn" href="/#platform-guide">Read the setup guide</a></div></section>`:''}
     ${section==='restaurants'?`<section class="card"><h2>Your hospitality locations</h2><p class="muted">Each location has its own menu, table QR codes, orders and subscription.</p><div class="actions"><a class="btn primary" href="/#dashboard?locations=1">Manage restaurants & locations</a></div></section>`:''}
     ${section==='company'?platformCompanyForm():''}
     ${section==='help'?`<section class="card"><h2>From setup to your first scan</h2>${steps}<h3>When should I use the optional settings?</h3><p><strong>Projects and tags</strong> help you find codes later. <strong>Expiry</strong> closes access at a UTC date and time. <strong>Scheduled destination</strong> temporarily changes where a dynamic code sends visitors. Codes imported in bulk start paused.</p></section>`:''}
@@ -320,10 +377,10 @@ async function platformHistory(id){
 }
 const beforePlatformRender=render;
 render=function(){
-  if(ready&&!loadError&&['platform','platform-demo','hospitality'].includes(view)){
-    const content=view==='platform'?platformWorkspace():view==='platform-demo'?platformDemo():home();
+  if(ready&&!loadError&&['platform','platform-demo','platform-products','platform-guide','hospitality'].includes(view)){
+    const content=view==='platform'?platformWorkspace():view==='platform-demo'?platformDemo():view==='platform-products'?platformProducts():view==='platform-guide'?platformGuide():home();
     document.getElementById('root').innerHTML=header()+content;
-    document.title='Cotiso QR | '+({'platform':'Workspace','platform-demo':'How it works','hospitality':'Hospitality'}[view]);
+    document.title='Cotiso QR | '+({'platform':'Workspace','platform-demo':'How it works','platform-products':'Products','platform-guide':'User guide','hospitality':'Hospitality'}[view]);
     return;
   }
   beforePlatformRender();
@@ -341,7 +398,7 @@ if(ready)render();
 
 const existingHospitalityDemo=demo;
 demo=function(){
-  return existingHospitalityDemo()+`<section class="wrap cotiso-workspace"><h2>Try a table order with options</h2>
+  return `<section class="wrap cotiso-workspace"><h2>Try a table order with options</h2>
     <p>Example restaurant · Table 7. This demo runs in your browser.</p>
     <form class="card" onsubmit="previewHospitalityOrder(event)">
       <label>Size<select name="size"><option value="4.50">Half pint · £4.50</option><option value="7.00">Pint · £7.00</option></select></label>
@@ -350,7 +407,7 @@ demo=function(){
       <button class="btn primary">Send example dish list</button>
       <p role="status"></p>
       <div data-demo-order hidden><button class="btn" type="button" onclick="advanceHospitalityDemo(this)">Confirm order</button></div>
-    </form></section>`;
+    </form></section>`+existingHospitalityDemo();
 };
 function previewHospitalityOrder(event){
   event.preventDefault();
@@ -366,7 +423,7 @@ function previewHospitalityOrder(event){
 }
 function advanceHospitalityDemo(button){
   const form=button.form,status=form.querySelector('[role=status]');
-  const next={'Confirm order':['Order confirmed','Start preparation'],'Start preparation':['Preparing','Mark served'],'Mark served':['Served · Added to the open table bill','Finished']}[button.textContent];
+  const next={'Confirm order':['Order confirmed','Start preparation'],'Start preparation':['Preparing','Mark served'],'Mark served':['Served · Added to the open table bill','Request bill'],'Request bill':['Bill requested · Take payment through the till','Record till payment'],'Record till payment':['Bill closed · Example payment recorded','Finished']}[button.textContent];
   if(!next)return;
   status.textContent='Table 7 · '+form.dataset.order+' · '+next[0];
   button.textContent=next[1];

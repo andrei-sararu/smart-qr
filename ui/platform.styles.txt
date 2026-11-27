@@ -27,3 +27,10 @@
 .cotiso-steps{padding-left:1.3em;line-height:1.65}.cotiso-steps li+li{margin-top:10px}
 .cotiso-advanced{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:10px}
 .cotiso-advanced summary{cursor:pointer;font-weight:700}
+.cotiso-demo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}
+.cotiso-demo-grid [hidden]{display:none!important}
+.cotiso-guide-steps{display:grid;gap:12px;margin:22px 0;scroll-margin-top:16px}
+.cotiso-guide-steps summary{cursor:pointer;font-weight:750}
+.cotiso-guide-steps summary span{display:inline-grid;place-items:center;min-width:28px;height:28px;background:#e7f4ef;color:#09574c;border-radius:50%;margin-right:4px}
+.cotiso-guide-steps p{line-height:1.6;margin-bottom:0}
+@media(max-width:640px){.cotiso-demo-grid{grid-template-columns:1fr}.cotiso-header .nav{flex-wrap:wrap;justify-content:flex-end}.cotiso-header{height:auto;padding-block:10px}}
