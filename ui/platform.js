@@ -2,26 +2,41 @@ const platformHospitality=home;
 let companyRecord=null,companyError='',companyPending=false;
 let selectedProject='',platformSearch='';
 let platformData=null,platformError='',platformPending=false;
-const useCases=[
-  ['Asset management','Equipment label','Asset profile and maintenance instructions','Report a fault','Fault reports per asset'],
-  ['Property & housing','Building or unit sign','Property profile with repair and safety links','Report a repair','Repair reports per location'],
-  ['Field service','Machine or service point','Service instructions and support links','Request service','Requests by service point'],
-  ['Retail & packaging','Product packaging','Product information and warranty links','Open warranty registration','Registration link selections'],
-  ['Hospitality','Table card','Digital menu with variants and extras','Request service','Service requests by table'],
-  ['Marketing','Printed campaign','Campaign landing page and interest form','Submit interest','Form submissions by campaign']
+const cotisoOffers=[
+  {
+    title:'QR menus & table service',
+    description:'For restaurants and cafés. Publish a digital menu and put a QR code on each table. Add waiter requests and table ordering when you need them.',
+    href:'/#hospitality',
+    action:'Explore restaurant QR',
+    secondaryHref:'/#pricing',
+    secondaryAction:'See restaurant plans'
+  },
+  {
+    title:'QR labels & issue reporting',
+    description:'For teams managing equipment and locations. Add a QR label that opens instructions or an issue form. See submitted reports against the right asset or location.',
+    href:'/#platform-demo',
+    action:'See equipment QR in action',
+    secondaryHref:'/#platform-guide?topic=profiles',
+    secondaryAction:'Read the setup guide'
+  }
 ];
+
+function cotisoOfferCards(){
+  return `<div class="cotiso-offers">${cotisoOffers.map(({title,description,href,action,secondaryHref,secondaryAction})=>`<article>
+    <h2>${title}</h2><p>${description}</p>
+    <div class="actions"><a class="btn primary" href="${href}">${action}</a><a class="btn" href="${secondaryHref}">${secondaryAction}</a></div>
+  </article>`).join('')}</div>`;
+}
+
 home=function(){
   if(view==='hospitality')return platformHospitality();
   return `<main class="cotiso-home">
-    <section class="cotiso-hero"><div class="wrap cotiso-hero-grid">
-      <div><p class="cotiso-kicker">QR infrastructure for business operations</p><h1>Turn every physical touchpoint into a digital workflow.</h1>
-      <p>Give equipment, properties and products a persistent digital identity. Change what a printed QR code opens, collect reports and measure what people do after they scan.</p>
-      <div class="actions"><a class="btn primary" href="/#platform">Start free</a><a class="btn" href="/#platform-demo">See how it works</a></div></div>
-      <div class="cotiso-preview"><p class="cotiso-kicker">Example Smart QR profile</p><h2>Boiler B1024</h2><p>Plant room · Riverside House</p><ol><li><strong>Scan</strong> the label on the boiler.</li><li><strong>Open</strong> its instructions or issue form.</li><li><strong>Submit</strong> a report linked to B1024.</li><li><strong>Measure</strong> visits, actions and submitted reports.</li></ol></div>
+    <section class="cotiso-hero"><div class="wrap cotiso-overview">
+      <h1>QR software for restaurants, equipment and locations</h1>
+      <p>Put a menu on the table or give people a way to report an issue where it happens. Choose the QR tools that fit your business.</p>
     </div></section>
-    <section class="wrap cotiso-use-cases"><h2>One platform for the places and things you manage</h2>
-    <div class="cotiso-cases">${useCases.map(([title,object,experience,action,outcome])=>`<article><h3>${esc(title)}</h3><dl><dt>Scan</dt><dd>${esc(object)}</dd><dt>Experience</dt><dd>${esc(experience)}</dd><dt>Action</dt><dd>${esc(action)}</dd><dt>Measure</dt><dd>${esc(outcome)}</dd></dl>${title==='Hospitality'?'<a class="btn small" href="/#hospitality">Explore hospitality</a>':''}</article>`).join('')}</div>
-    <div class="quick-start"><div><h2>Create your first Smart QR profile</h2><p class="muted">The platform release supports up to 25 codes per account.</p></div><a class="btn primary" href="/#platform">Open workspace</a></div></section><footer class="wrap cotiso-footer"><a href="/#home">Cotiso QR</a><a href="/#hospitality">Hospitality</a><a href="/#contact">Contact</a><a href="/#privacy">Privacy</a></footer>
+    <section class="wrap cotiso-use-cases" aria-label="Cotiso QR products">${cotisoOfferCards()}</section>
+    <footer class="wrap cotiso-footer"><a href="/#home">Cotiso QR</a><a href="/#hospitality">Hospitality</a><a href="/#contact">Contact</a><a href="/#privacy">Privacy</a></footer>
   </main>`;
 };
 const cotisoNavigation=[
@@ -86,16 +101,21 @@ function progressAssetDemo(button){
   button.textContent=started?'Mark resolved':'Resolved';
   button.disabled=!started;
 }
-const platformProductCards=[
+const equipmentFeatures=[
   ['QR codes','Create static or editable links. Schedule a temporary destination, group codes into projects and import or export them in bulk.','codes'],
   ['Smart QR Profiles','Give an asset or location a public page with links and an issue form. Keep the same printed code when you edit the profile.','profiles'],
-  ['Reports and analytics','See tracked visits, actions and reports. Move a report from New to In progress to Resolved and export the filtered list.','reports'],
-  ['Hospitality','Publish a digital menu, configure table codes and follow orders from confirmation to the table bill. Add separate restaurant locations from one account.','hospitality']
+  ['Reports and analytics','See tracked visits, actions and reports. Move a report from New to In progress to Resolved and export the filtered list.','reports']
 ];
 function platformProducts(){
-  return `<main class="wrap cotiso-workspace"><h1>Cotiso QR products</h1><p>Choose the tools for your asset, customer touchpoint or restaurant.</p><div class="cotiso-cases">
-    ${platformProductCards.map(([title,description,key])=>`<article><h2>${title}</h2><p>${description}</p><div class="actions"><a class="btn small" href="${key==='hospitality'?'/#help?topic=locations':'/#platform-guide?topic='+key}">View guide</a>${key==='hospitality'?'<a class="btn small" href="/#products">Hospitality products</a>':''}<a class="btn small" href="${key==='hospitality'?'/#demo':'/#platform-demo'}">Try demo</a></div></article>`).join('')}</div>
-    <a class="btn primary" href="/#platform">Open workspace</a></main>`;
+  return `<main class="wrap cotiso-workspace">
+    <div class="cotiso-overview"><h1>Choose your QR product</h1><p>Find the tools for serving guests or managing QR labels across equipment and locations.</p></div>
+    ${cotisoOfferCards()}
+    <section class="cotiso-equipment-features"><h2>What QR labels &amp; issue reporting includes</h2>
+      <div class="cotiso-cases">${equipmentFeatures.map(([title,description,key])=>`<article><h3>${title}</h3><p>${description}</p><a class="btn small" href="/#platform-guide?topic=${key}">View guide</a></article>`).join('')}</div>
+      <p>Use the reports inbox to review submissions and update their status.</p>
+      <a class="btn primary" href="/#platform">Open QR workspace</a>
+    </section>
+  </main>`;
 }
 const platformGuideTopics={
   codes:[['Choose a code type','Pick Dynamic link if you expect its destination to change. A Static link always opens its original address.'],['Save the destination','Enter the HTTPS address. Use Optional settings for an expiry or scheduled destination.'],['Test and download','Open the saved code to check the destination. Download PNG or SVG and test the printed code before distributing it.']],
@@ -106,7 +126,7 @@ function platformGuide(){
   const requested=new URLSearchParams(location.hash.split('?')[1]).get('topic');
   const topic=Object.hasOwn(platformGuideTopics,requested)?requested:'codes';
   return `<main class="wrap cotiso-workspace"><h1>Cotiso QR user guide</h1>
-    <nav class="actions" aria-label="Guide topics">${platformProductCards.filter(([, ,key])=>key!=='hospitality').map(([title,,key])=>`<a class="btn ${topic===key?'primary':''}" ${topic===key?'aria-current="page"':''} href="/#platform-guide?topic=${key}">${title}</a>`).join('')}<a class="btn" href="/#help">Restaurant guide</a></nav>
+    <nav class="actions" aria-label="Guide topics">${equipmentFeatures.map(([title,,key])=>`<a class="btn ${topic===key?'primary':''}" ${topic===key?'aria-current="page"':''} href="/#platform-guide?topic=${key}">${title}</a>`).join('')}<a class="btn" href="/#help">Restaurant guide</a></nav>
     <div class="cotiso-guide-steps">${platformGuideTopics[topic].map(([title,copy],index)=>`<details class="card" ${index===0?'open':''}><summary><span>${index+1}</span> ${title}</summary><p>${copy}</p></details>`).join('')}</div>
     <div class="actions"><a class="btn primary" href="/#platform-demo">Practice in the demo</a><a class="btn" href="/#platform">Open workspace</a></div></main>`;
 }
@@ -460,7 +480,7 @@ render=function(){
     return;
   }
   beforePlatformRender();
-  if(view==='home')document.title='Cotiso QR | Physical touchpoints, digital workflows';
+  if(view==='home')document.title='Cotiso QR | Restaurant menus and equipment labels';
 };
 const beforePlatformRoute=route;
 let lastCotisoRoute=location.hash;
