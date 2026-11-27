@@ -153,3 +153,20 @@ test('Company billing details are private and editable without a restaurant',asy
   assert.equal((await call(endpoint,'PUT',{...company,vatNumber:''})).status,200);
   assert.equal((await (await call(endpoint)).json()).company.vatNumber,'');
 });
+
+test('Report workflow retains status, rejects stale updates and protects account boundaries',async()=>{
+  const {call}=fixture();
+  const {id}=await (await call('/api/platform','POST',profile)).json();
+  await call('/q/'+id+'/submit','POST','message=Boiler+fault',null);
+  const reports=async()=>(await (await call('/api/platform')).json()).reports;
+  const [report]=await reports();
+  assert.equal(report.status,'new');
+  const path='/api/platform/reports/'+report.id;
+  assert.equal((await call(path,'PUT',{status:'resolved',updated:0},'account-b')).status,404);
+  const changed=await call(path,'PUT',{status:'in_progress',updated:0});
+  assert.equal(changed.status,200);
+  const {updated}=await changed.json();
+  assert.equal((await call(path,'PUT',{status:'resolved',updated:0})).status,409);
+  assert.equal((await call(path,'PUT',{status:'resolved',updated})).status,200);
+  assert.equal((await reports())[0].status,'resolved');
+});
