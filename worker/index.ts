@@ -1,3 +1,4 @@
+import { platform } from '../lib/platform.mjs';
 import handler from "vinext/server/fetch-handler";
 import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
@@ -7,6 +8,10 @@ const worker = {
     const auth = await localAuth(request, env);
     if (auth instanceof Response) return auth;
     request = auth;
+    const path = new URL(request.url).pathname;
+    if (path.startsWith('/q/') || path === '/api/platform' || path.startsWith('/api/platform/')) {
+      return platform(request, env.DB);
+    }
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.

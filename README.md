@@ -1,4 +1,6 @@
-# Smart QR
+# Cotiso QR
+
+The general-purpose QR workspace and its phased roadmap are documented in [Cotiso QR platform](docs/platform-roadmap.md). The original hospitality application is available under `/#hospitality`.
 
 Server-backed QR menus and table service for independent restaurants. Existing visual design retained from the initial preview.
 
