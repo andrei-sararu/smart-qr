@@ -33,3 +33,24 @@
 @keyframes walk-scan{0%,100%{top:20%}50%{top:80%}}
 @media(max-width:440px){.workflow-devices{grid-template-columns:1fr;min-height:0}.workflow-phone,.workflow-board{min-height:0}.workflow-phone .walk-food{height:86px}}
 @media(prefers-reduced-motion:reduce){.workflow-demo *,.workflow-demo *::after{animation:none!important}}
+
+@media (max-width:700px){
+  .focused-page h1,.help-page h1,.cotiso-workspace h1,.cotiso-home h1,.workflow-demo h1{
+    font-family:"Instrument Sans","DM Sans",system-ui,sans-serif;
+    font-weight:700;
+    font-size:clamp(2rem,8vw,3.1rem);
+    letter-spacing:-.018em;
+    line-height:1.14;
+    text-wrap:balance;
+  }
+  .focused-page h2,.help-page h2,.cotiso-workspace h2,.workflow-demo h2{
+    font-family:"Instrument Sans","DM Sans",system-ui,sans-serif;
+    letter-spacing:0;
+    line-height:1.22;
+  }
+  .suite-section-head{gap:16px;margin-bottom:22px}
+  .suite-section-head p,.products-hero p{margin-top:12px;line-height:1.6}
+  .suite-pricing .suite-section-head>div:first-child{max-width:100%}
+  .suite-pricing .suite-section-head h1{font-size:clamp(2.1rem,8vw,3.1rem)}
+  .suite-plan h2{margin-bottom:6px}
+}
