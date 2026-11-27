@@ -1,4 +1,5 @@
 const platformHospitality=home;
+let companyRecord=null,companyError='',companyPending=false;
 let selectedProject='',platformSearch='';
 let platformData=null,platformError='',platformPending=false;
 const useCases=[
@@ -40,7 +41,7 @@ async function loadPlatform(){
   try{platformData=await api('platform');platformError=''}catch(error){platformError=error.message}
   finally{platformPending=false;if(view==='platform')render()}
 }
-const platformSections={overview:'Overview',codes:'QR codes',reports:'Reports',analytics:'Analytics',help:'Getting started'};
+const platformSections={overview:'Overview',codes:'QR codes',reports:'Reports',analytics:'Analytics',help:'Getting started',company:'Company & billing'};
 function platformSection(){
   const value=new URLSearchParams(location.hash.split('?')[1]).get('tab');
   return Object.hasOwn(platformSections,value)?value:'overview';
@@ -65,6 +66,7 @@ function platformWorkspace(){
     <nav aria-label="Workspace navigation">${Object.entries(platformSections).map(([key,label])=>`<a href="/#platform?tab=${key}" ${section===key?'aria-current="page"':''}>${label}</a>`).join('')}<button type="button" onclick="signOutLocal()">Sign out</button></nav>
     <div><div class="topline"><div><p class="cotiso-kicker">Workspace</p><h1>${platformSections[section]}</h1></div>${['overview','codes','help'].includes(section)?'<button class="btn primary" onclick="platformEditor()">Create QR code</button>':''}</div>
     ${section==='overview'?`<section class="card"><h2>${profiles.length?'Your QR workspace':'Set up your first QR code'}</h2><p class="muted">${profiles.length?`You have ${profiles.length} of 25 codes in this workspace.`:'Start with an asset, location or link that you want people to open from a printed code.'}</p>${profiles.length?'':steps}<div class="actions"><a class="btn" href="/#platform?tab=codes">Manage QR codes</a><a class="btn" href="/#platform?tab=help">Read the setup guide</a></div></section>`:''}
+    ${section==='company'?platformCompanyForm():''}
     ${section==='help'?`<section class="card"><h2>From setup to your first scan</h2>${steps}<h3>When should I use the optional settings?</h3><p><strong>Projects and tags</strong> help you find codes later. <strong>Expiry</strong> closes access at a UTC date and time. <strong>Scheduled destination</strong> temporarily changes where a dynamic code sends visitors. Codes imported in bulk start paused.</p></section>`:''}
     <section id="cotiso-analytics" ${section==='analytics'?'':'hidden'}><h2>Activity in the last 30 days</h2><button class="btn small" onclick="loadPlatform()">Refresh analytics</button><div class="cotiso-metrics">${[['scan','Tracked visits'],['action','Actions selected'],['start','Forms opened'],['complete','Reports submitted']].map(([kind,label])=>`<div><strong>${count(kind)}</strong><span>${label}</span></div>`).join('')}</div><p class="fine">Tracked visits include opened links. Static codes have no visit tracking. Link selections measure clicks.</p>
     ${scanDays.length?`<details><summary>Visits and outcomes by day</summary><table class="table"><thead><tr><th>Date (UTC)</th><th>Visits</th><th>Reports</th></tr></thead><tbody>${scanDays.map(day=>`<tr><td>${esc(day)}</td>${['scan','complete'].map(kind=>`<td>${events.filter(row=>row.day===day&&row.kind===kind).reduce((sum,row)=>sum+row.total,0)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`:''}</section>
@@ -78,6 +80,46 @@ function platformWorkspace(){
     </form>${visible.length?visible.map(item=>`<article class="cotiso-code"><div><strong>${esc(item.title)}</strong><p class="fine">${esc(item.reference||item.location||'')} · ${{profile:'Smart profile',dynamic:'Dynamic link',static:'Static link'}[item.mode]} · ${item.mode==='static'?'Fixed destination':item.status==='active'&&item.expires&&item.expires<=Date.now()?'expired':esc(item.status)} · ${count('scan',item.id)} tracked visits</p><p class="fine">${esc([item.project,...item.tags,item.expires?'Expires '+new Date(item.expires).toISOString().slice(0,16).replace('T',' ')+' UTC':''].filter(Boolean).join(' · '))}</p></div><div class="actions"><a class="btn small" href="/api/platform/${item.id}/png">PNG</a><a class="btn small" href="/api/platform/${item.id}/svg">SVG</a>${item.mode==='static'?'':`<a class="btn small" href="/q/${item.id}" target="_blank" rel="noopener noreferrer">Open</a>`}<button class="btn small" onclick="platformEditor('${item.id}')">Edit</button><button class="btn small" onclick="platformEditor('${item.id}',true)">Clone</button><button class="btn small" onclick="platformHistory('${item.id}')">History</button></div></article>`).join(''):profiles.length?'<p>No codes match the selected filters.</p>':'<p>Create a static code, an editable destination, or a Smart QR profile with multiple actions.</p>'}</section>
     <section id="cotiso-inbox" ${section==='reports'?'':'hidden'}><h2>Recent reports</h2><p class="muted">Reports submitted through active Smart QR profiles appear here with the asset reference and location.</p><button class="btn small" onclick="loadPlatform()">Refresh reports</button>${reports.length?reports.map(report=>`<article class="cotiso-code"><div><strong>${esc(report.title)}</strong><p class="fine">${esc([report.reference,report.location,new Date(report.created).toLocaleString()].filter(Boolean).join(' · '))}</p><p class="cotiso-report">${esc(report.message)}</p></div></article>`).join(''):'<p>No reports yet. To test the flow, open an active Smart QR profile with the issue form enabled and submit a test report.</p>'}</section></div>
   </div></main>`;
+}
+async function loadPlatformCompany(){
+  if(companyPending)return;
+  companyPending=true;
+  companyError='';
+  try{companyRecord=await api('platform/company')}catch(error){companyError=error.message}
+  finally{companyPending=false;if(view==='platform'&&platformSection()==='company')render()}
+}
+function platformCompanyForm(){
+  if(companyError)return `<section class="card"><p role="alert">${esc(companyError)}</p><button class="btn" onclick="loadPlatformCompany()">Retry</button></section>`;
+  if(!companyRecord)return '<section class="card"><p>Loading billing details…</p></section>';
+  const company=companyRecord.company||{};
+  const input=(name,label,max,{required=false,type='text',autocomplete='off',hint=''}={})=>
+    `<label>${label}<input name="${name}" maxlength="${max}" type="${type}" autocomplete="${autocomplete}" ${required?'required':''} value="${esc(company[name]||'')}" ${hint?'placeholder="'+hint+'"':''}></label>`;
+  return `<section class="card"><h2>Invoice details</h2><p class="muted">Enter the legal name and billing address you want recorded for your company. These details are private to your account.</p>
+    <p class="fine">Cotiso QR platform checkout and automated invoices are not active yet.</p>
+    <form onsubmit="savePlatformCompany(event)">
+      ${input('company','Legal company name',120,{required:true,autocomplete:'organization'})}
+      ${input('address','Address line 1',200,{required:true,autocomplete:'address-line1'})}
+      ${input('addressLine2','Address line 2 (optional)',200,{autocomplete:'address-line2'})}
+      <div class="formgrid">${input('city','Town or city',80,{required:true,autocomplete:'address-level2'})}
+      ${input('postalCode','Postcode',20,{required:true,autocomplete:'postal-code'})}</div>
+      ${input('country','Country code',2,{required:true,autocomplete:'country',hint:'GB or RO'})}
+      <div class="formgrid">${input('registration','Company registration number (optional)',140)}
+      ${input('vatNumber','VAT number (optional)',40)}</div>
+      ${input('billingEmail','Billing email (optional)',254,{type:'email',autocomplete:'email'})}
+      <button class="btn primary" type="submit">Save billing details</button>
+      <p role="status">${companyRecord.updated?'Last saved '+esc(new Date(companyRecord.updated).toLocaleString()):''}</p>
+    </form></section>`;
+}
+async function savePlatformCompany(event){
+  event.preventDefault();
+  const form=event.currentTarget,button=form.querySelector('button'),status=form.querySelector('[role=status]');
+  button.disabled=true;
+  try{
+    companyRecord=await api('platform/company','PUT',Object.fromEntries(new FormData(form)));
+    form.elements.country.value=companyRecord.company.country;
+    status.textContent='Company billing details saved.';
+  }catch(error){status.textContent=error.message}
+  finally{button.disabled=false}
 }
 function applyPlatformFilters(event){
   event.preventDefault();
@@ -241,6 +283,9 @@ render=function(){
 const beforePlatformRoute=route;
 route=async function(){
   await beforePlatformRoute();
-  if(view==='platform'&&session)await loadPlatform();
+  if(view==='platform'&&session){
+    if(platformSection()==='company')await Promise.all([platformData?null:loadPlatform(),loadPlatformCompany()]);
+    else await loadPlatform();
+  }
 };
 if(ready)render();

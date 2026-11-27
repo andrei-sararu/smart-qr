@@ -139,3 +139,17 @@ test('A dynamic code uses its scheduled URL only inside the window and respects 
   assert.equal(history.history[0].profile.schedule,null);
   assert.equal(history.history[1].profile.schedule.url,schedule.url);
 });
+
+test('Company billing details are private and editable without a restaurant',async()=>{
+  const {call}=fixture();
+  const endpoint='/api/platform/company';
+  const company={company:'Example Ltd',address:'1 Main Street',city:'Camberley',postalCode:'GU15 1AA',country:'gb',registration:'12345678',vatNumber:'GB123456789',billingEmail:'billing@example.com'};
+  assert.equal((await call(endpoint,'GET',undefined,null)).status,401);
+  assert.equal((await call(endpoint,'PUT',company,'account-a','https://outside.test')).status,403);
+  assert.equal((await call(endpoint,'PUT',{...company,billingEmail:'invalid'})).status,400);
+  assert.equal((await call(endpoint,'PUT',company)).status,200);
+  assert.deepEqual((await (await call(endpoint)).json()).company,{...company,addressLine2:'',country:'GB'});
+  assert.equal((await (await call(endpoint,'GET',undefined,'account-b')).json()).company,null);
+  assert.equal((await call(endpoint,'PUT',{...company,vatNumber:''})).status,200);
+  assert.equal((await (await call(endpoint)).json()).company.vatNumber,'');
+});
