@@ -82,14 +82,16 @@ function workflowWalkthrough(kind){
     <p class="workflow-kicker">Automatic product walkthrough</p>
     <h1>${restaurant?'From table scan to closed bill':'From equipment scan to resolved fault'}</h1>
     <p class="muted">Follow ${restaurant?'the guest’s phone and the waiter’s service board':'the resident’s phone and the maintenance workspace'} side by side. Illustrative journey.</p>
-    <ol class="workflow-progress" aria-label="Walkthrough chapters">${steps.map(([title],i)=>`<li ${i===0?'aria-current="step"':''}><span>${i+1}</span> ${title}</li>`).join('')}</ol>
+    <ol class="workflow-progress" aria-label="Walkthrough chapters">${steps.map(([title],i)=>`<li ${i===0?'aria-current="step"':''}><button type="button" data-chapter="${i}" onclick="seekWalkthrough(this,Number(this.dataset.chapter))"><span>${i+1}</span> ${title}</button></li>`).join('')}</ol>
     <section class="workflow-scene" aria-label="Current chapter">
       <div class="workflow-photo ${photo?'':'workflow-equipment'}" ${photo?`style="background-image:linear-gradient(0deg,#111b2fc9,#111b2f22),url('${photo}')"`:''}>
         <div><span data-walk-step>Step 1 of ${steps.length}</span><h2 data-walk-title>${steps[0][0]}</h2><p data-walk-copy>${steps[0][1]}</p></div>
       </div>
       <div class="workflow-devices" data-walk-devices>${walkthroughScreens(kind,0)}</div>
     </section>
-    <div class="actions"><button type="button" class="btn" onclick="toggleWalkthrough(this)">Pause</button><button type="button" class="btn" onclick="replayWalkthrough(this)">Replay</button>
+    <div class="actions"><button type="button" class="btn" data-walk-toggle onclick="toggleWalkthrough(this)">Pause</button><button type="button" class="btn" onclick="replayWalkthrough(this)">Replay</button>
+    <button type="button" class="btn" data-walk-prev onclick="stepWalkthrough(this,-1)" disabled>Previous</button>
+    <button type="button" class="btn" data-walk-next onclick="stepWalkthrough(this,1)">Next</button>
     <a class="btn" href="${restaurant?'/#help?topic=service':'/#platform-guide?topic=profiles'}">Open setup guide</a></div>
     <details class="workflow-transcript"><summary>Read all steps</summary><ol>${steps.map(([title,copy])=>`<li><strong>${title}</strong><p>${copy}</p></li>`).join('')}</ol></details>
   </main>`;
@@ -97,6 +99,8 @@ function workflowWalkthrough(kind){
 let activeWalkthrough;
 function updateWalkthrough(player,index){
   player.index=index;
+  player.root.querySelector('[data-walk-prev]').disabled=index===0;
+  player.root.querySelector('[data-walk-next]').disabled=index===player.steps.length-1;
   const [title,copy]=player.steps[index];
   const values={step:'Step '+(index+1)+' of '+player.steps.length,title,copy};
   for(const [key,value] of Object.entries(values))player.root.querySelector('[data-walk-'+key+']').textContent=value;
@@ -111,6 +115,10 @@ function startWalkthrough(player){
   player.paused=false;
   player.toggle.textContent='Pause';
   player.root.removeAttribute('data-paused');
+  if(player.root.hasAttribute('data-still')){
+    player.root.removeAttribute('data-still');
+    updateWalkthrough(player,player.index);
+  }
   player.timer=setTimeout(function advance(){
     if(!player.root.isConnected||player.paused)return;
     if(!document.hidden)updateWalkthrough(player,(player.index+1)%player.steps.length);
@@ -122,6 +130,19 @@ function toggleWalkthrough(button){
   if(!player||!player.root.contains(button))return;
   if(player.paused)startWalkthrough(player);
   else{player.paused=true;clearTimeout(player.timer);player.root.setAttribute('data-paused','');button.textContent='Play'}
+}
+function seekWalkthrough(button,index){
+  const player=activeWalkthrough;
+  if(!player||!player.root.contains(button)||!Number.isInteger(index)||index<0||index>=player.steps.length)return;
+  clearTimeout(player.timer);
+  player.paused=true;
+  player.toggle.textContent='Play';
+  player.root.removeAttribute('data-paused');
+  player.root.setAttribute('data-still','');
+  updateWalkthrough(player,index);
+}
+function stepWalkthrough(button,offset){
+  if(activeWalkthrough)seekWalkthrough(button,activeWalkthrough.index+offset);
 }
 function replayWalkthrough(button){
   const player=activeWalkthrough;
@@ -139,8 +160,9 @@ render=function(){
     document.getElementById('root').innerHTML=header()+workflowWalkthrough(kind);
     document.title='Cotiso QR | '+(kind==='restaurant'?'Restaurant walkthrough':'Asset walkthrough');
     const scene=document.querySelector('[data-walkthrough]');
-    activeWalkthrough={root:scene,view,kind,index:0,steps:kind==='restaurant'?restaurantWalkthrough:assetWalkthrough,toggle:scene.querySelector('button')};
-    startWalkthrough(activeWalkthrough);
+    activeWalkthrough={root:scene,view,kind,index:0,steps:kind==='restaurant'?restaurantWalkthrough:assetWalkthrough,toggle:scene.querySelector('[data-walk-toggle]')};
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)seekWalkthrough(activeWalkthrough.toggle,0);
+    else startWalkthrough(activeWalkthrough);
     return;
   }
   clearTimeout(activeWalkthrough?.timer);

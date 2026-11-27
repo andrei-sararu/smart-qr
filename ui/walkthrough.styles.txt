@@ -54,3 +54,13 @@
   .suite-pricing .suite-section-head h1{font-size:clamp(2.1rem,8vw,3.1rem)}
   .suite-plan h2{margin-bottom:6px}
 }
+
+.workflow-progress li{padding:0}
+.workflow-progress button{display:block;min-height:42px;padding:7px 10px;border:0;border-radius:inherit;background:transparent;color:inherit;font:inherit;text-align:left}
+.workflow-progress button:focus-visible{outline:2px solid #096659;outline-offset:3px}
+.workflow-demo[data-still] *,.workflow-demo[data-still] *::after{animation:none!important}
+.workflow-demo[data-still] .walk-tap::after{opacity:1;transform:translate(-50%,-50%)}
+@media(max-width:600px){
+  .workflow-progress{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .workflow-progress button{width:100%;min-height:44px}
+}
