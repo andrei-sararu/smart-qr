@@ -30,6 +30,8 @@ Project, tag and UTC expiry settings are stored separately and committed with co
 
 Dynamic links support one temporary HTTPS destination with a UTC start (inclusive) and end (exclusive). The scan endpoint evaluates the window at request time. Pause and QR expiry take precedence. Clones and imports clear schedules. Changes are recorded in revision history.
 
+CSV bulk import accepts asset lists and creates paused Smart QR Profiles with an issue form. Required column: title. Optional columns: reference, location, description, project, tags (pipe-separated), url and action_label. The workspace includes a downloadable template. The existing JSON batch endpoint validates each code and saves all or none.
+
 ## Proposed platform tiers
 
 Free covers static codes and limited dynamic QR. Pro adds branding, profiles and forms. Business adds assets, teams, workflows, API, webhooks and domains. Enterprise adds identity, governance, retention and SLAs. These are packaging hypotheses. Existing hospitality plans stay independent and unshipped platform entitlements should not appear as purchasable functionality.

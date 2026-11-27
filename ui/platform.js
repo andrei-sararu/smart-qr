@@ -83,9 +83,28 @@ function exportPlatformCodes(){
 }
 function openPlatformImport(){
   modal(`<h2>Bulk import QR codes</h2>
-    <p>Choose a Cotiso QR JSON export. Every code will receive a new identity. Dynamic links and profiles start paused. Expiry dates, destination schedules, reports and scan history are excluded.</p>
-    <label>QR code export<input type="file" accept=".json,application/json" onchange="previewPlatformImport(this)"></label>
+    <p>Choose a CSV asset list or a Cotiso QR JSON export. Every code will receive a new identity. Dynamic links and profiles start paused. Expiry dates, destination schedules, reports and scan history are excluded.</p>
+    <p><a class="btn small" href="/cotiso-asset-import.csv" download>Download CSV template</a></p>
+    <label>CSV or JSON file<input type="file" accept=".csv,.json,text/csv,application/json" onchange="previewPlatformImport(this)"></label>
     <div data-import-preview aria-live="polite"></div>`);
+}
+function platformCodesFromCsv(text){
+  const source=text.replace(/^\uFEFF/,'').trim();
+  const header=source.split(/\r?\n/,1)[0];
+  const delimiter=header.includes(';')&&!header.includes(',')?';':',';
+  const [columns,...rows]=parseCSV(source,delimiter);
+  if(!columns)throw Error('The CSV is empty.');
+  const keys=columns.map(value=>value.trim().toLowerCase());
+  if(!keys.includes('title')||new Set(keys).size!==keys.length)throw Error('Include a title column and use each column name once.');
+  if(!rows.length||rows.length>25)throw Error('Use 1–25 asset rows per CSV.');
+  return rows.map((row,index)=>{
+    const get=key=>row[keys.indexOf(key)]?.trim()||'';
+    const title=get('title'),url=get('url');
+    if(row.length!==keys.length||!title)throw Error('CSV record '+(index+2)+': check the title and column count.');
+    return {title,description:get('description'),reference:get('reference'),location:get('location'),project:get('project'),
+      tags:get('tags').split('|').map(tag=>tag.trim()).filter(Boolean),mode:'profile',report:true,
+      actions:url?[{label:get('action_label')||'View information',url}]:[]};
+  });
 }
 async function previewPlatformImport(input){
   const preview=input.closest('.modal').querySelector('[data-import-preview]');
@@ -93,11 +112,13 @@ async function previewPlatformImport(input){
   const file=input.files[0];
   if(!file)return;
   try{
-    if(file.size>250000)throw Error('Choose a JSON export under 250 KB.');
+    if(file.size>250000)throw Error('Choose a CSV or JSON file under 250 KB.');
     let data;
-    try{data=JSON.parse(await file.text())}catch{throw Error('The file does not contain valid JSON.')}
+    const contents=await file.text();
+    if(/\.csv$/i.test(file.name))data={version:1,codes:platformCodesFromCsv(contents)};
+    else try{data=JSON.parse(contents)}catch{throw Error('Choose a valid CSV or JSON file.')}
     if(!input.isConnected||input.files[0]!==file)return;
-    if(data?.version!==1||!Array.isArray(data.codes)||!data.codes.length||data.codes.length>25)throw Error('Choose a Cotiso QR version 1 export with 1–25 codes.');
+    if(data?.version!==1||!Array.isArray(data.codes)||!data.codes.length||data.codes.length>25)throw Error('Choose a CSV with 1–25 assets or a Cotiso QR version 1 export.');
     if(platformData.profiles.length+data.codes.length>25)throw Error('This batch exceeds the workspace limit of 25 codes.');
     preview.innerHTML=`<h3>Review ${data.codes.length} new codes</h3><ol>${data.codes.map(code=>`<li>${esc(code?.title||'Untitled')} · ${esc(code?.mode||'Unknown type')}</li>`).join('')}</ol><p role="alert"></p><button class="btn primary">Create new codes</button>`;
     const button=preview.querySelector('button');
