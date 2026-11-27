@@ -33,7 +33,7 @@ if(ready)render();
 /* Focused marketing views, with shareable hash routes and browser history. */
 const fullMarketingHome=home;
 const marketingRoutes={products:[],product:['product','features','languages','how'],examples:['examples'],pricing:['pricing'],performance:['performance','opportunity'],resources:['performance','opportunity','faq'],faq:['faq'],contact:['contact'],calculator:['potential'],evidence:['evidence']};
-function marketingSection(id){const t=document.createElement('template');t.innerHTML=fullMarketingHome();return t.content.querySelector('#'+id)?.outerHTML||''}
+function marketingSection(id){const t=document.createElement('template');t.innerHTML=fullMarketingHome();const section=t.content.querySelector('#'+id);if(!section)return '';section.removeAttribute('id');return section.outerHTML}
 const productCatalogue=[
   {
     title:'Digital QR menu', plan:'Included in Free',
@@ -90,12 +90,11 @@ function productsPage(){
 }
 function marketingPage(id){if(id==='products')return productsPage();const titles={product:'Product',examples:'Example menus',pricing:'Plans & pricing',performance:'Service insights',resources:'Resources',faq:'Frequently asked questions',contact:'Contact',calculator:'Sales calculator',evidence:'Industry research'};return '<main class="wrap focused-page"><a class="breadcrumb" href="/#home">Home</a> <span class="muted"> / '+titles[id]+'</span>'+marketingRoutes[id].map(marketingSection).join('')+((id==='resources'||id==='performance')?'<div class="actions"><a class="btn" href="/#calculator">Sales calculator</a><a class="btn" href="/#evidence">Industry research</a></div>':'')+'<div class="bottom"><div><h2>Ready to create your digital menu?</h2></div><button class="btn primary" onclick="onboard()">Start free</button></div>'+marketingFooter()+'</main>'}
 home=function(){return '<main class="wrap focused-home">'+growthHero()+impactSection()+'<section class="quick-start"><div><h2>Ready for your first digital menu?</h2><p class="muted">Explore the product or compare plans before you start.</p></div><div class="actions"><a class="btn" href="/#pricing">See pricing</a><button class="btn primary" onclick="onboard()">Start free</button></div></section>'+marketingFooter()+'</main>'};
-navTo=function(id){go(({features:'product',languages:'product',how:'product',opportunity:'performance',potential:'calculator',confidence:'privacy'})[id]||id)};
+navTo=function(id){go(({features:'product',languages:'help?topic=languages',how:'product',opportunity:'performance',potential:'calculator',confidence:'privacy'})[id]||id)};
 const focusedHeader=header;
 header=function(){let h=focusedHeader();h=h.replace(/href="\/#home" onclick="event.preventDefault\(\);navTo\('([^']+)'\)"/g,(_,id)=>'href="/#'+id+'"'+(view===id?' aria-current="page"':''));h=h.replace('>FAQ</a>','>FAQ</a><a class="desktop" href="/#resources">Resources</a><a class="desktop" href="/#contact">Contact</a>'+(session?'':'<a class="desktop" href="/#dashboard">Log in</a>'));return h};
 const focusedRender=render;
 render=function(){if(ready&&!loadError&&Object.hasOwn(marketingRoutes,view)){document.getElementById('root').innerHTML=header()+marketingPage(view);document.title='Smart QR | '+view.charAt(0).toUpperCase()+view.slice(1);return}focusedRender();document.title='Smart QR — Digital menus & table service'};
-window.addEventListener('hashchange',()=>window.scrollTo(0,0));
 if(ready)render();
 
 /* Commercial homepage: clear value proposition, product-led visual, direct navigation. */

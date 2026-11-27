@@ -17,6 +17,7 @@ function workflowWalkthrough(kind){
   const photo=restaurant?venues[lab.venue]?.photo||venues.restaurant.photo:'';
   const dish=restaurant?seed[1].image:'';
   return `<main class="wrap workflow-demo" data-walkthrough="${kind}">
+    <nav class="actions" aria-label="Demo journeys"><a class="btn ${restaurant?'primary':''}" href="/#demo" ${restaurant?'aria-current="page"':''}>Restaurant service</a><a class="btn ${restaurant?'':'primary'}" href="/#platform-demo" ${restaurant?'':'aria-current="page"'}>Asset reporting</a></nav>
     <p class="workflow-kicker">Automatic product walkthrough</p>
     <h1>${restaurant?'From table scan to closed bill':'From equipment scan to resolved fault'}</h1>
     <p class="muted">Follow ${restaurant?'the guest’s phone and the waiter’s service board':'the resident’s phone and the maintenance workspace'} side by side. Illustrative journey.</p>

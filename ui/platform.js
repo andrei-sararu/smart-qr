@@ -24,10 +24,22 @@ home=function(){
     <div class="quick-start"><div><h2>Create your first Smart QR profile</h2><p class="muted">The platform release supports up to 25 codes per account.</p></div><a class="btn primary" href="/#platform">Open workspace</a></div></section><footer class="wrap cotiso-footer"><a href="/#home">Cotiso QR</a><a href="/#hospitality">Hospitality</a><a href="/#contact">Contact</a><a href="/#privacy">Privacy</a></footer>
   </main>`;
 };
-const platformHeader=header;
+const cotisoNavigation=[
+  ['/#platform-products','Products',['platform-products','products']],
+  ['/#hospitality','Hospitality',['hospitality']],
+  ['/#demo','Demos',['demo','product','platform-demo','examples']],
+  ['/#platform-guide','Guides',['platform-guide','help']],
+  ['/#pricing','Pricing',['pricing']]
+];
 header=function(){
-  if(!['home','platform','platform-demo','platform-products','platform-guide'].includes(view))return platformHeader();
-  return `<div class="wrap"><header class="cotiso-header"><a class="brand" href="/#home"><img class="brand-icon" src="/favicon.svg?v=2" width="36" height="36" alt="">Cotiso QR</a><nav class="nav" aria-label="Main navigation"><a href="/#platform-products">Products</a><a href="/#platform-guide">Guide</a><a href="/#hospitality">Hospitality</a><a class="btn primary small" href="/#platform">${session?'Workspace':'Start free'}</a></nav></header></div>`;
+  const links=cotisoNavigation.map(([href,label,views])=>`<a href="${href}" ${views.includes(view)?'aria-current="page"':''}>${label}</a>`).join('');
+  return `<div class="wrap"><header class="cotiso-header unified-header">
+    <a class="brand" href="/#home"><img class="brand-icon" src="/favicon.svg?v=2" width="36" height="36" alt="">Cotiso QR</a>
+    <nav class="unified-nav" aria-label="Main navigation">${links}</nav>
+    <details class="unified-mobile-nav"><summary>Menu</summary><nav aria-label="Mobile navigation">${links}</nav></details>
+    <div class="unified-account">${session?`<details><summary>Workspace</summary><div><a href="/#platform">QR workspace</a><a href="/#dashboard">Restaurant workspace</a></div></details>`:''}
+    ${session?'':'<a class="btn primary small" href="/#platform">Start free / sign in</a>'}</div>
+  </header></div>`;
 };
 function platformDemo(){
   return `<main class="wrap cotiso-workspace"><a class="breadcrumb" href="/#home">Home</a><h1>From boiler label to repair report</h1><p>Example asset · B1024 · Riverside House</p>
@@ -451,8 +463,15 @@ render=function(){
   if(view==='home')document.title='Cotiso QR | Physical touchpoints, digital workflows';
 };
 const beforePlatformRoute=route;
+let lastCotisoRoute=location.hash;
+history.scrollRestoration='manual';
 route=async function(){
-  await beforePlatformRoute();
+  const routeHash=location.hash;
+  const changed=routeHash!==lastCotisoRoute;
+  lastCotisoRoute=routeHash;
+  const pending=beforePlatformRoute();
+  if(changed)window.scrollTo({top:0,left:0,behavior:'instant'});
+  await pending;
   if(view==='platform'&&session){
     if(platformSection()==='company')await Promise.all([platformData?null:loadPlatform(),loadPlatformCompany()]);
     else await loadPlatform();
