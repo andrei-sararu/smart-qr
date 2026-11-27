@@ -329,11 +329,11 @@ function renderRestaurantMenu(menu,language,{preview=false}={}){
     </article>`;
   };
   return `<div class="customer qr-menu public-theme-${theme}${accent?' custom-accent':''}" lang="${lang}" style="${appearance}">
-    <header class="qr-menu-cover">
+    <div class="qr-menu-cover">
       ${menu.logo?companyLogo(menu.logo):''}
       <span>${menu.table?esc(menu.table.label||labels[6]+' '+menu.table.number):labels[5]}</span>
       <h2>${esc(menu.name)}</h2>
-    </header>
+    </div>
     <div class="qr-menu-content">
       ${preview?'':`<div class="qr-menu-tools">
         <label for="guest-menu-language">Menu language<select id="guest-menu-language" onchange="changeGuestLanguage(this.value)">${Object.entries(LOCALES).map(([code,l])=>`<option value="${code}" ${lang===code?'selected':''}>${l[0]}${code===base?' · Original':''}</option>`).join('')}</select></label>
